@@ -9,10 +9,7 @@ from urllib import request
 
 class QiniuResourseManageMixin(object):
 	def _encode_entry(self,entry):
-		if isinstance(entry,bytes):
-			return base64.urlsafe_b64encode(entry).decode("utf-8")
-		if isinstance(entry,str):
-			return base64.urlsafe_b64encode(entry.encode("utf-8")).decode("utf-8")
+		return self._urlsafe_base64_encode(entry)
 	def _access_token(self,url_path,body=None):
 		signing_str=url_path+"\n"
 		if body:

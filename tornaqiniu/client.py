@@ -1,7 +1,7 @@
 #-*- coding:utf-8 -*-
 from tornado import gen
 from .resource_manage import QiniuResourseManageMixin
-
+from .errors import EncodingError
 class QiniuClient(QiniuResourseManageMixin):
 	def __init__(self,access_key,secret_key,bucket=None):
 		assert isinstance(access_key,(str,bytes))
