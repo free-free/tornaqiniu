@@ -31,7 +31,7 @@ class QiniuResourseManageMixin(object):
 		}
 		if body or method=="POST":
 			headers["Content-Type"]="application/x-www-form-urlencoded"
-		req=httpclient.HTTPRequest(url,method=method or "GET",body=body,headers=headers)
+		req=httpclient.HTTPRequest(url,method=method or "GET",body=body,headers=headers,allow_nonstandard_methods=True)
 		http_request=AsyncHTTPClient()
 		try:
 			response=yield http_request.fetch(req)
@@ -74,16 +74,16 @@ class QiniuResourseManageMixin(object):
 	def list(self,bucket,limit=1000,prefix="",delimiter="",marker=""):
 		assert limit>1 and limit<=1000,"limit must bettween 1 to 1000"
 		query_string=urllib.parse.urlencode({
-			'bucket':self._encode_entry(bucket),
+			'bucket':bucket,
 			'limit':limit,
 			'marker':marker,
-			'prefix':self._encode_entry(prefix),
-			'delimiter':self._encode_entry(prefix),
+			'prefix':prefix,
+			'delimiter':delimiter,
 		})	
-		response=yield self._send_manage_request('/list?'+query_string,host="rsf.qbox.me",method="POST",body="")
+		response=yield self._send_manage_request('/list?'+query_string,host="rsf.qbox.me",method="POST")
 		return response
 	@gen.coroutine
-	def fetch(self,fecth_url,bucket,key=None):
+	def fetch_store(self,fecth_url,bucket,key=None):
 		if key:
 			encoded_entry=self._encode_entry(bucket+":"+key)
 		else:
