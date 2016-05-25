@@ -1,6 +1,7 @@
 #-*- coding:utf-8 -*_
 from tornado import gen
 from tornado.httpclient import AsyncHTTPClient
+from tornado import httpclient
 import base64
 import hmac
 import urllib
@@ -9,26 +10,28 @@ from urllib import request
 class QiniuResourseManageMixin(object):
 	def _encode_entry(self,entry):
 		if isinstance(entry,bytes):
-			return base64.urlsafe_b64encode(entry)
+			return base64.urlsafe_b64encode(entry).decode("utf-8")
 		if isinstance(entry,str):
-			return base64.urlsafe_b64encode(entry.encode("utf-8"))
+			return base64.urlsafe_b64encode(entry.encode("utf-8")).decode("utf-8")
 	def _access_token(self,url_path,body=None):
 		signing_str=url_path+"\n"
 		if body:
 			signing_str=signing_str+body
-		sign=hmac.new(self.__secret_key,signing_str,'sha1')
-		encoded_sign=base64.urlsafe_b64encode(sign.digest)
-		access_token=self.__access_key+":"+encoded_sign
+		sign=hmac.new(self._secret_key.encode("utf-8"),signing_str.encode("utf-8"),'sha1')
+		encoded_sign=base64.urlsafe_b64encode(sign.digest())
+		access_token=self._access_key+":"+encoded_sign.decode("utf-8")
 		return access_token
 	@gen.coroutine
 	def _send_manage_request(self,url_path,host="rs.qiniu.com",body=None,method=None):
 		full_host="http://"+host
 		url=full_host+url_path
-		req=request.Request(url,method=method,data=body)
-		req.add_header("Authorization","QBox "+self._access_token(url_path,body))
-		req.add_header("Host",host)
+		headers={
+			"Authorization":"QBox "+self._access_token(url_path,body),
+			"Host":host
+		}
 		if body or method=="POST":
-			req.add_header("Content-Type","application/x-www-form-urlencoded")
+			headers["Content-Type"]="application/x-www-form-urlencoded"
+		req=httpclient.HTTPRequest(url,method=method or "GET",body=body,headers=headers)
 		http_request=AsyncHTTPClient()
 		try:
 			response=yield http_request.fetch(req)
@@ -37,7 +40,7 @@ class QiniuResourseManageMixin(object):
 		except Exception as e:
 			print("Error:"+str(e))
 		else:
-			return response.body
+			return response.body.decode()
 		finally:	
 			http_request.close()
 	@gen.coroutine
@@ -77,7 +80,7 @@ class QiniuResourseManageMixin(object):
 			'prefix':self._encode_entry(prefix),
 			'delimiter':self._encode_entry(prefix),
 		})	
-		response=yield self._send_manage_request('/list?'+query_string,host="rsf.qbox.me",method="POST")
+		response=yield self._send_manage_request('/list?'+query_string,host="rsf.qbox.me",method="POST",body="")
 		return response
 	@gen.coroutine
 	def fetch(self,fecth_url,bucket,key=None):
