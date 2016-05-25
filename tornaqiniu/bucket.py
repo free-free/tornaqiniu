@@ -47,7 +47,7 @@ class QiniuResourseManageMixin(object):
 		response= yield self._send_manage_request("/stat/"+encoded_entry)
 		return response
 	@gen.coroutine
-	def move(self,src_bucket,src_key,dest_bucket,dest_key)
+	def move(self,src_bucket,src_key,dest_bucket,dest_key):
 		src_entry=self._encode_entry(src_bucket+':'+src_key)
 		dest_entry=self._encode_entry(dest_bucket+':'+dest_key)
 		response=yield self._send_manage_request("/move/"+src_entry+'/'+dest_entry,method="POST")
@@ -91,7 +91,7 @@ class QiniuResourseManageMixin(object):
 	@gen.coroutine
 	def batch(self,*opers):
 		opertions={}
-		for oper in opers;
+		for oper in opers:
 			opertions['op']=oper
 		opertions_body=urllib.parse.urlencode(opertions)
 		response=yield self._send_manage_request('/batch',method="POST",body=opertions_body)
