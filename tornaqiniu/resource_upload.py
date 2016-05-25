@@ -4,7 +4,7 @@ import hmac
 import hashlib
 import base64
 from datetime import datetime
-from .errors import EncodingError
+from .errors import EncodingError,PolicyKeyError,PolicyValueTypeError
 from . import PUT_POLICY
 class QiniuResourceUploadMixin(object):	
 	def upload_token(self,bucket=None,key=None,expires=3600,policys=None):
@@ -29,6 +29,19 @@ class QiniuResourceUploadMixin(object):
 		upload_token=self._access_key+":"+self._bytes_decode(b64_encoded_sign)+":"+self._bytes_decode(b64_encoded_policys)
 		self._policys={}
 		return upload_token
-			
+	def _check_policy(self,field,value):
+		if policy_field not in PUT_POLICY.keys():
+				raise PolicyKeyError("Not support '%s' policy"%policy_field)		
+		if not isinstance(policy_value,PUT_POLICY[policy_field]['type']):
+				raise PolicyValueTypeError("Policy '%s' value type error"%policy_field)
+	def add_policy(self,policy_field,policy_value):
+		self._check_policy(policy_field,policy_value)
+		self._policys[policy_field]=policy_value
+	def add_policys(self,policy_pairs):
+		for key,value in policy_pairs.items():
+			self._check_policy(key,value)
+			self._policys[key]=value
+	@property
+	def policys(self):
+		return self._policys
 		
-			
