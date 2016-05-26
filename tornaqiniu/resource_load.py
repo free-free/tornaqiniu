@@ -6,7 +6,7 @@ import base64
 from datetime import datetime
 from .errors import EncodingError,PolicyKeyError,PolicyValueTypeError
 from . import PUT_POLICY
-class QiniuResourceUploadMixin(object):	
+class QiniuResourceLoadMixin(object):	
 	def upload_token(self,bucket=None,key=None,expires=3600,policys=None):
 		if not bucket:
 			bucket=self._bucket
@@ -23,8 +23,8 @@ class QiniuResourceUploadMixin(object):
 		#josn encode policys
 		json_policys=self._json_encode(self._policys)
 		#base64 encode
-		b64_encoded_policys=self._urlsafe_base64_encode(self._bytes_encode(json_policys))	
-		sha1_sign=hmac.new(self._bytes_encode(self._secret_key),b64_encoded_policys,'sha1').digest()
+		b64_encoded_policys=self._urlsafe_base64_encode(json_policys)	
+		sha1_sign=self._hamc_sha1(self._secret_key,b64_encoded_policys)
 		b64_encoded_sign=self._urlsafe_base64_encode(sha1_sign)
 		upload_token=self._access_key+":"+self._bytes_decode(b64_encoded_sign)+":"+self._bytes_decode(b64_encoded_policys)
 		self._policys={}
@@ -44,4 +44,81 @@ class QiniuResourceUploadMixin(object):
 	@property
 	def policys(self):
 		return self._policys
+	def _gen_private_url(self,key,expires=3600,host=None):
+		if not host:
+			host=self._download_host
+			assert host!=None,"download host can' be empty"
+		if not host.startswith("http://"):
+			host="http://"+host
+		download_url=host+key+"?="+str(int(datetime.timestamp(datetime.now()))+expires)
+		sha1_sign=self._hamc_sha1(self._secret_key,download_url)
+		b64_encoded_sign=self._urlsafe_base64_encode(sha1_sign)
+		token=self._access_key+":"+self._bytes_decode(b64_encoded_sign)
+		return token
+	def private_url(self,key,expires=3600,host=None):
+		r"""
+			generate one private url 
+			
+			@parameters:
+				key:resource key,'str' type,
+				expires:'int' type,units:'s',
+				host:resource host name
+		"""
+		return self._gen_private_url(key,expires,host)
+	def private_urls(self,keys,expires=3600,host=None,key_name=None):
+		"""
+			generate multi private urls at the same time
 		
+			@parameters
+				keys:resource keys ,'list','dict' or  'tuple' type,
+				expires:int type,units:'s',
+				host:resource host name,
+				key_name:when type of 'keys' is 'dict',your must point out key name in 'keys'
+			@return:
+				download_urls: 'list' typw
+		"""
+		download_urls=[]
+		if isinstance(keys,(list,tuple)):
+			for key in keys:
+				download_urls.append(self._gen_private_url(key,expires,host))
+			return download_urls
+		elif isinstance(keys,dict) and key_name:
+			for field in keys.items():
+				download_urls.append(self._gen_private_url(field[key_name],expires,host))
+		else:
+			pass
+		return download_urls
+	def _gen_public_url(self,key,host=None):
+		if not host:
+			host=self._download_host
+			assert host!=None,"download host can't be empty"
+		if not host.startswith("http://"):
+			host="http://"+host
+		download_url=host+key
+		return download_url
+	def public_url(self,key,host=None):
+		r"""
+			generate public url 
+			
+			@parameters:
+				key:resource key,'str' type,
+				host:resource host name
+		"""
+		return self._gen_public_url(key,host)
+	def public_urls(self,keys,host=None,key_name=None):
+		r"""
+			generate multi public url
+		"""
+		download_urls=[]
+		if isinstance(keys,(tuple,list)):
+			for key in keys:
+				download_urls.append(self._gen_public_url(key,host))
+			return download_urls
+		elif isinstance(keys,dict) or key_name:
+			for field in keys.itmes():
+				download_urls.append(self._gen_public_url(field[key_name],host))
+		else:
+			pass
+		return download_urls	
+	
+	
