@@ -73,7 +73,7 @@ class QiniuResourceLoadMixin(object):
 				keys:resource keys ,'list','dict' or  'tuple' type,
 				expires:int type,units:'s',
 				host:resource host name,
-				key_name:when type of 'keys' is 'dict',your must point out key name in 'keys'
+				key_name:when  'keys' type  is 'dict',your must point out key name in 'keys'
 			@return:
 				download_urls: 'list' typw
 		"""
@@ -108,6 +108,7 @@ class QiniuResourceLoadMixin(object):
 	def public_urls(self,keys,host=None,key_name=None):
 		r"""
 			generate multi public url
+			the parameters difinition is same with 'private_urls'
 		"""
 		download_urls=[]
 		if isinstance(keys,(tuple,list)):
