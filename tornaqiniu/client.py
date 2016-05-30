@@ -2,11 +2,15 @@
 from tornado import gen
 import json
 from .resource_manage import QiniuResourseManageMixin
-from .resource_upload import QiniuResourceLoadMixin
+from .resource_load import QiniuResourceLoadMixin
+from .resource_process import QiniuImageProcessMixin
 from .errors import EncodingError
+import base64
+import hmac
 class QiniuClient(
 		QiniuResourseManageMixin,
-		QiniuResourceLoadMixin	
+		QiniuResourceLoadMixin,
+		QiniuImageProcessMixin	
 		):
 	def __init__(self,access_key,secret_key,download_host=None,bucket=None):
 		assert isinstance(access_key,(str,bytes))
@@ -20,7 +24,7 @@ class QiniuClient(
 	def _urlsafe_base64_encode(self,policy):
 		if isinstance(policy,str):
 			return base64.urlsafe_b64encode(self._bytes_encode(policy))
-		elif isinstance(polict,bytes):
+		elif isinstance(policy,bytes):
 			return base64.urlsafe_b64encode(policy)
 		else:
 			raise EncodingError("'policy' must be str or bytes type")
