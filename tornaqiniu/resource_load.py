@@ -24,7 +24,7 @@ class QiniuResourceLoadMixin(object):
 		json_policys=self._json_encode(self._policys)
 		#base64 encode
 		b64_encoded_policys=self._urlsafe_base64_encode(json_policys)	
-		sha1_sign=self._hamc_sha1(self._secret_key,b64_encoded_policys)
+		sha1_sign=self._hmac_sha1(self._secret_key,b64_encoded_policys)
 		b64_encoded_sign=self._urlsafe_base64_encode(sha1_sign)
 		upload_token=self._access_key+":"+self._bytes_decode(b64_encoded_sign)+":"+self._bytes_decode(b64_encoded_policys)
 		self._policys={}
@@ -50,11 +50,12 @@ class QiniuResourceLoadMixin(object):
 			assert host!=None,"download host can' be empty"
 		if not host.startswith("http://"):
 			host="http://"+host
-		download_url=host+key+"?="+str(int(datetime.timestamp(datetime.now()))+expires)
-		sha1_sign=self._hamc_sha1(self._secret_key,download_url)
+		download_url=host+'/'+key+"?e="+str(int(datetime.timestamp(datetime.now()))+expires)
+		sha1_sign=self._hmac_sha1(self._secret_key,download_url)
 		b64_encoded_sign=self._urlsafe_base64_encode(sha1_sign)
 		token=self._access_key+":"+self._bytes_decode(b64_encoded_sign)
-		return token
+		download_url+="&"+token
+		return download_url
 	def private_url(self,key,expires=3600,host=None):
 		r"""
 			generate one private url 
@@ -94,7 +95,7 @@ class QiniuResourceLoadMixin(object):
 			assert host!=None,"download host can't be empty"
 		if not host.startswith("http://"):
 			host="http://"+host
-		download_url=host+key
+		download_url=host+'/'+key
 		return download_url
 	def public_url(self,key,host=None):
 		r"""
