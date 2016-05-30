@@ -41,8 +41,8 @@ class QiniuImageProcessMixin(object):
 				'ignore-error':whether to ignore error,when image procession failed!.the default value is true
 		"""
 		assert mode<6 and mode>=0,"'mode' must range from 0 to 5"
-		assert not width and not height,"both 'width' and 'height' can't be none "
-		assert 0=<quality<=100,"'quality' must range from 0 to 100"
+		assert width or height,"both 'width' and 'height' can't be none "
+		assert quality<=100 and quality>=0,"'quality' must range from 0 to 100"
 		p_pattern=""
 		p_pattern+="imageView2/"+str(mode)
 		if width:
@@ -61,7 +61,7 @@ class QiniuImageProcessMixin(object):
 			url+="&"+p_pattern
 		else:
 			url+="?"+p_pattern
-		return p_pattern
+		return url
 
 			
 		
