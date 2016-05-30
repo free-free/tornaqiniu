@@ -57,11 +57,32 @@ class QiniuImageProcessMixin(object):
 			p_pattern+='/quality/'+str(quality)
 		if ignore_error!=0:
 			p_pattern+='/ignore-error/'+str(ignore_error)
-		if url.find("?"):
+		if url.find("?")>=0:
 			url+="&"+p_pattern
 		else:
 			url+="?"+p_pattern
 		return url
 
+class QiniuResourceQRCodeMixin(object):
+	_level_map={1:"L",2:"M",3:"Q",4:"H"}
+	def _generate_qrcode(self,download_url,mode,level):
+		r"""
+			generate QR code for resource 
 			
-		
+			@parameter:
+				1.download_url:resource download url,
+				2.mode: 0 or 1,
+				3.level: QR code image size,the value
+				range from 1 to 4
+		"""
+		assert int(mode)==0 or (mode)==1,"'mode' must be 0 or 1"
+		assert int(level) in [1,2,3,4],"'level' must range from 1 to 4"
+		interface="qrcode/"+str(mode)+'/level/'+str(self._level_map.get(level))
+		return_url=download_url
+		if download_url.find("?")>=0:
+			return_url+="&"+interface
+		else:
+			return_url+="?"+interface
+		return return_url
+	def qr_code(self,url,mode=0,level=1):
+		return self._generate_qrcode(url,mode,level)
