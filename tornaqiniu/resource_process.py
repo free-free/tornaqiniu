@@ -62,6 +62,35 @@ class QiniuImageProcessMixin(object):
 		else:
 			url+="?"+p_pattern
 		return url
+	def image_watermark(self,
+			   origin_url,
+			   water_image_url,
+			   dissolve=100,
+			   gravity=1,
+			   dx=10,
+			   dy=10,
+			   ws=0):
+		assert isinstance(dissovle,int) and dissolve>=1 and dissolve<=100
+		assert isinstance(gravity,int) 
+		assert isinstance(dx,int) and isinstance(dy,int)
+		assert float(ws)>=0.0 and float(ws)<=1.0
+		gravity_map={1:"NorthWest",2:"North",3:"NorthEast",
+			     4:"West",5:"Center",6:"East",
+			     7:"SouthWest",8:"South",9:"SouthEast"}
+		interface="watermark/1"
+		interface+='/image/'+str(water_image_url)
+		interface+='/dissolve/'+str(dissolve)
+		interface+='/gravity/'+str(gravity_map.get(gravity,"NorthWest"))
+		interface+='/dx/'+str(dx)
+		interface+='/dy/'+str(dy)
+		interface+='/ws/'+str(ws)
+		resulted_url=origin_url
+		if origin_url.find("?")>=0:
+			resulted_url+='&'+interface
+		else:
+			resulted_url+='?'+interface
+		return resulted_url
+
 
 class QiniuResourceQRCodeMixin(object):
 	_level_map={1:"L",2:"M",3:"Q",4:"H"}
@@ -75,14 +104,33 @@ class QiniuResourceQRCodeMixin(object):
 				3.level: QR code image size,the value
 				range from 1 to 4
 		"""
-		assert int(mode)==0 or (mode)==1,"'mode' must be 0 or 1"
+		assert int(mode)==0 or int(mode)==1,"'mode' must be 0 or 1"
 		assert int(level) in [1,2,3,4],"'level' must range from 1 to 4"
 		interface="qrcode/"+str(mode)+'/level/'+str(self._level_map.get(level))
-		return_url=download_url
+		resulted_url=download_url
 		if download_url.find("?")>=0:
-			return_url+="&"+interface
+			resulted_url+="&"+interface
 		else:
-			return_url+="?"+interface
-		return return_url
+			resulted_url+="?"+interface
+		return resulted_url
 	def qr_code(self,url,mode=0,level=1):
 		return self._generate_qrcode(url,mode,level)
+class QiniuResourceMDToHTMLMixin(object):
+	"""
+		convert mardown to html
+		@parameters:
+			1.mode:0 or 1
+			2.css: url of css style
+	"""
+	def _md2html_url(self,url,mode,css):
+		assert int(mode)==0 or int(mode)==1,"'mode' must be 0 or 1"
+		interface="md2html/"+str(mode)+'/css/'+str(self._urlsafe_base64_encode(css))
+		resulted_url=url
+		if resulted_url.find("?")>=0:
+			resulted_url+="?"+interface
+		else:
+			resulted_url+='&'+interface
+		return resulted_url
+	
+	
+	
