@@ -6,6 +6,9 @@ import base64
 
 
 class QiniuImageProcessMixin(object):
+	_gravity_map={1:"NorthWest",2:"North",3:"NorthEast",
+		     4:"West",5:"Center",6:"East",
+		     7:"SouthWest",8:"South",9:"SouthEast"}
 	def image_view2(self,url,mode,width=None,height=None,frmt=None,interlace=0,quality=75,ignore_error=0):
 		r"""
 			qiniu imageView2 procession
@@ -66,7 +69,7 @@ class QiniuImageProcessMixin(object):
 			   origin_url,
 			   water_image_url,
 			   dissolve=100,
-			   gravity=1,
+			   gravity=9,
 			   dx=10,
 			   dy=10,
 			   ws=0):
@@ -74,13 +77,10 @@ class QiniuImageProcessMixin(object):
 		assert isinstance(gravity,int) 
 		assert isinstance(dx,int) and isinstance(dy,int)
 		assert float(ws)>=0.0 and float(ws)<=1.0
-		gravity_map={1:"NorthWest",2:"North",3:"NorthEast",
-			     4:"West",5:"Center",6:"East",
-			     7:"SouthWest",8:"South",9:"SouthEast"}
 		interface="watermark/1"
 		interface+='/image/'+str(water_image_url)
 		interface+='/dissolve/'+str(dissolve)
-		interface+='/gravity/'+str(gravity_map.get(gravity,"NorthWest"))
+		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
 		interface+='/dx/'+str(dx)
 		interface+='/dy/'+str(dy)
 		interface+='/ws/'+str(ws)
@@ -90,7 +90,37 @@ class QiniuImageProcessMixin(object):
 		else:
 			resulted_url+='?'+interface
 		return resulted_url
-
+	
+	def text_watermark(self,origin_url,
+				text,
+				font="宋体",
+				font_size=0,
+				fill="#ffffff",
+				dissolve=100,
+				gravity=9,
+				dx=10,
+				dy=10):
+		assert isinstance(font,str)
+		assert isinstance(font_size,int)
+		assert isinstance(fill,str)
+		assert isinstance(dissolve,int) and dissolve>=1 and dissolve<=100
+		assert isinstance(gravity,int)
+		assert isinstance(dx,int) and isinstance(dy,int)
+		interface="watermark/2"
+		resulted_url=origin_url
+		interface+='/text/'+str(self._urlsafe_base64_encode(text))
+		interface+='/font/'+str(self._urlsafe_base64_encode(font))
+		interface+='/fill/'+str(self._urlsafe_base64_encode(fill))
+		interface+='/dissolve/'+str(dissolve)
+		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
+		interface+='/dx/'+str(dx)
+		interface++'/dy/'+str(dy)
+		if origin_url.find("?")>=0:
+			resulted_url+='&'+interface
+		else:
+			resulted_url+="?"+interface
+		return resulted_url
+	
 
 class QiniuResourceQRCodeMixin(object):
 	_level_map={1:"L",2:"M",3:"Q",4:"H"}
