@@ -72,6 +72,9 @@ class QiniuImageProcessMixin(object):
 			   dx=10,
 			   dy=10,
 			   ws=0):
+		r"""
+			The detail definition of parameters,please refer to qiniu documents
+		"""
 		assert isinstance(dissolve,int) and dissolve>=1 and dissolve<=100
 		assert isinstance(gravity,int) 
 		assert isinstance(dx,int) and isinstance(dy,int)
@@ -101,6 +104,9 @@ class QiniuImageProcessMixin(object):
 				gravity=9,
 				dx=10,
 				dy=10):
+		r"""
+			The detail  definition of parameters,please refer to qiniu documents
+		"""
 		assert isinstance(font,str)
 		assert isinstance(font_size,int)
 		assert isinstance(fill,str)
@@ -126,7 +132,13 @@ class QiniuImageProcessMixin(object):
 		else:
 			resulted_url+="?"+watermark_interface
 		return resulted_url
-		
+	def multi_watermark(self,origin_url,*args):
+		"""
+			multi watermakr parameters are too much,
+			so i decided to implement it at next time.
+		"""
+		pass
+				
 
 class QiniuResourceQRCodeMixin(object):
 	_level_map={1:"L",2:"M",3:"Q",4:"H"}
