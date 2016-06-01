@@ -54,7 +54,7 @@ class QiniuResourceLoadMixin(object):
 		sha1_sign=self._hmac_sha1(self._secret_key,download_url)
 		b64_encoded_sign=self._urlsafe_base64_encode(sha1_sign)
 		token=self._access_key+":"+self._bytes_decode(b64_encoded_sign)
-		download_url+="&"+token
+		download_url+="&token="+token
 		return download_url
 	def private_url(self,key,expires=3600,host=None):
 		r"""
