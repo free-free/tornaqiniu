@@ -65,8 +65,7 @@ class QiniuImageProcessMixin(object):
 		else:
 			url+="?"+p_pattern
 		return url
-	def image_watermark(self,
-			   origin_url,
+	def _image_watermark_interface(self,
 			   water_image_url,
 			   dissolve=100,
 			   gravity=9,
@@ -84,13 +83,16 @@ class QiniuImageProcessMixin(object):
 		interface+='/dx/'+str(dx)
 		interface+='/dy/'+str(dy)
 		interface+='/ws/'+str(ws)
+		return interface
+	def image_watermark(self,origin_url,water_image_url,dissolve=100,gravity=9,dx=10,dy=10,ws=0):
+		watermark_interface=self._image_watermark_interface(water_image_url,dissolve,gravity,dx,dy,ws)
 		resulted_url=origin_url
 		if origin_url.find("?")>=0:
-			resulted_url+='&'+interface
+			resulted_url+='&'+watermark_interface
 		else:
-			resulted_url+='?'+interface
-		return resulted_url
-	def _text_watermark(self
+			resulted_url+='?'+watermark_interface
+		return resulted_url	
+	def _text_watermark_interface(self,
 				text,
 				font="宋体",
 				font_size=500,
@@ -106,7 +108,6 @@ class QiniuImageProcessMixin(object):
 		assert isinstance(gravity,int)
 		assert isinstance(dx,int) and isinstance(dy,int)
 		interface="watermark/2"
-		resulted_url=origin_url
 		interface+='/text/'+str(self._bytes_decode(self._urlsafe_base64_encode(text)))
 		interface+='/font/'+str(self._bytes_decode(self._urlsafe_base64_encode(font)))
 		interface+='/fontsize/'+str(font_size)
@@ -118,7 +119,7 @@ class QiniuImageProcessMixin(object):
 		return interface
 
 	def text_watermark(self,origin_url,text,font="宋体",font_size=500,fill="#000",dissolve=100,gravity=9,dx=10,dy=10):
-		watermark_interface=self._text_watermark(text,font,font_size,fill,dissovle,gravity,dx,dy)
+		watermark_interface=self._text_watermark_interface(text,font,font_size,fill,dissolve,gravity,dx,dy)
 		resulted_url=origin_url
 		if origin_url.find("?")>=0:
 			resulted_url+='&'+watermark_interface
