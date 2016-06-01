@@ -108,13 +108,13 @@ class QiniuImageProcessMixin(object):
 		assert isinstance(dx,int) and isinstance(dy,int)
 		interface="watermark/2"
 		resulted_url=origin_url
-		interface+='/text/'+str(self._urlsafe_base64_encode(text))
-		interface+='/font/'+str(self._urlsafe_base64_encode(font))
-		interface+='/fill/'+str(self._urlsafe_base64_encode(fill))
+		interface+='/text/'+str(self._bytes_decode(self._urlsafe_base64_encode(text)))
+		interface+='/font/'+str(self._bytes_decode(self._urlsafe_base64_encode(font)))
+		interface+='/fill/'+str(self._bytes_decode(self._urlsafe_base64_encode(fill)))
 		interface+='/dissolve/'+str(dissolve)
 		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
 		interface+='/dx/'+str(dx)
-		interface++'/dy/'+str(dy)
+		interface+='/dy/'+str(dy)
 		if origin_url.find("?")>=0:
 			resulted_url+='&'+interface
 		else:
