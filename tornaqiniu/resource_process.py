@@ -90,8 +90,7 @@ class QiniuImageProcessMixin(object):
 		else:
 			resulted_url+='?'+interface
 		return resulted_url
-	
-	def text_watermark(self,origin_url,
+	def _text_watermark(self
 				text,
 				font="宋体",
 				font_size=500,
@@ -116,12 +115,17 @@ class QiniuImageProcessMixin(object):
 		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
 		interface+='/dx/'+str(dx)
 		interface+='/dy/'+str(dy)
+		return interface
+
+	def text_watermark(self,origin_url,text,font="宋体",font_size=500,fill="#000",dissolve=100,gravity=9,dx=10,dy=10):
+		watermark_interface=self._text_watermark(text,font,font_size,fill,dissovle,gravity,dx,dy)
+		resulted_url=origin_url
 		if origin_url.find("?")>=0:
-			resulted_url+='&'+interface
+			resulted_url+='&'+watermark_interface
 		else:
-			resulted_url+="?"+interface
+			resulted_url+="?"+watermark_interface
 		return resulted_url
-	
+		
 
 class QiniuResourceQRCodeMixin(object):
 	_level_map={1:"L",2:"M",3:"Q",4:"H"}
