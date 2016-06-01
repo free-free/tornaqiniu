@@ -73,12 +73,12 @@ class QiniuImageProcessMixin(object):
 			   dx=10,
 			   dy=10,
 			   ws=0):
-		assert isinstance(dissovle,int) and dissolve>=1 and dissolve<=100
+		assert isinstance(dissolve,int) and dissolve>=1 and dissolve<=100
 		assert isinstance(gravity,int) 
 		assert isinstance(dx,int) and isinstance(dy,int)
 		assert float(ws)>=0.0 and float(ws)<=1.0
 		interface="watermark/1"
-		interface+='/image/'+str(water_image_url)
+		interface+='/image/'+str(self._bytes_decode(self._urlsafe_base64_encode(water_image_url)))
 		interface+='/dissolve/'+str(dissolve)
 		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
 		interface+='/dx/'+str(dx)
