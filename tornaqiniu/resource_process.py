@@ -94,7 +94,7 @@ class QiniuImageProcessMixin(object):
 	def text_watermark(self,origin_url,
 				text,
 				font="宋体",
-				font_size=0,
+				font_size=500,
 				fill="#ffffff",
 				dissolve=100,
 				gravity=9,
@@ -110,6 +110,7 @@ class QiniuImageProcessMixin(object):
 		resulted_url=origin_url
 		interface+='/text/'+str(self._bytes_decode(self._urlsafe_base64_encode(text)))
 		interface+='/font/'+str(self._bytes_decode(self._urlsafe_base64_encode(font)))
+		interface+='/fontsize/'+str(font_size)
 		interface+='/fill/'+str(self._bytes_decode(self._urlsafe_base64_encode(fill)))
 		interface+='/dissolve/'+str(dissolve)
 		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
