@@ -160,7 +160,8 @@ class QiniuImageProcessMixin(object):
 	def get_imageinfo(self,origin_url):
 		url=self.imageinfo_url(origin_url)
 		response=yield self._send_async_request(url)
-		return response
+		if response:
+			return json_decode(response)
 	def imageexif_url(self,origin_url):
 		if origin_url.find("?")>=0:
 			return origin_url+'&exif'
@@ -200,7 +201,8 @@ class QiniuImageProcessMixin(object):
 	def get_imageave(self,origin_url):
 		url=self.imageave_url(origin_url)
 		response=yield self._send_async_request(url)
-		return response
+		if response:
+			return json_decode(response).get("RGB")
 
 class QiniuResourceQRCodeMixin(object):	
 	_level_map={1:"L",2:"M",3:"Q",4:"H"}
