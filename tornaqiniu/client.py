@@ -1,5 +1,6 @@
 #-*- coding:utf-8 -*-
-from tornado import gen
+from tornado import gen,httpclient
+from tornado.httpclient import AsyncHTTPClient
 import json
 from .resource_manage import QiniuResourseManageMixin
 from .resource_load import QiniuResourceLoadMixin
@@ -51,3 +52,22 @@ class QiniuClient(
 		else:
 			pass
 		return hmac.new(key,data,'sha1').digest()
+	@gen.coroutine
+	def _send_async_request(self,url,method="GET",body=None):
+		headers={}
+		if body or method.upper()=="POST":
+			headers['Content-Type']="application/x-www-form-urlencoded"
+		req=httpclient.HTTPRequest(url,method=method,body=body,headers=headers,allow_nonstandard_methods=True)
+		http_request=AsyncHTTPClient()
+		try:
+			response=yield http_request.fetch(req)
+		except httpclient.HTTPError as e:
+			print("Error:"+str(e))
+		else:
+			return response.body.decode()
+		finally:
+			http_request.close()
+
+
+
+
