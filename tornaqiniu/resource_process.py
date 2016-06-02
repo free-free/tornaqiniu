@@ -3,7 +3,7 @@ from tornado import gen,httpclient
 import hmac
 import base64
 import urllib
-
+from .utils import *
 
 class QiniuImageProcessMixin(object):
 	_gravity_map={1:"NorthWest",2:"North",3:"NorthEast",
@@ -80,7 +80,7 @@ class QiniuImageProcessMixin(object):
 		assert isinstance(dx,int) and isinstance(dy,int)
 		assert float(ws)>=0.0 and float(ws)<=1.0
 		interface="watermark/1"
-		interface+='/image/'+str(self._bytes_decode(self._urlsafe_base64_encode(water_image_url)))
+		interface+='/image/'+str(bytes_decode(urlsafe_base64_encode(water_image_url)))
 		interface+='/dissolve/'+str(dissolve)
 		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
 		interface+='/dx/'+str(dx)
@@ -114,10 +114,10 @@ class QiniuImageProcessMixin(object):
 		assert isinstance(gravity,int)
 		assert isinstance(dx,int) and isinstance(dy,int)
 		interface="watermark/2"
-		interface+='/text/'+str(self._bytes_decode(self._urlsafe_base64_encode(text)))
-		interface+='/font/'+str(self._bytes_decode(self._urlsafe_base64_encode(font)))
+		interface+='/text/'+str(bytes_decode(urlsafe_base64_encode(text)))
+		interface+='/font/'+str(bytes_decode(urlsafe_base64_encode(font)))
 		interface+='/fontsize/'+str(font_size)
-		interface+='/fill/'+str(self._bytes_decode(self._urlsafe_base64_encode(fill)))
+		interface+='/fill/'+str(bytes_decode(urlsafe_base64_encode(fill)))
 		interface+='/dissolve/'+str(dissolve)
 		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
 		interface+='/dx/'+str(dx)
@@ -238,7 +238,7 @@ class QiniuResourceMDToHTMLMixin(object):
 	"""
 	def _md2html_url(self,url,mode,css):
 		assert int(mode)==0 or int(mode)==1,"'mode' must be 0 or 1"
-		interface="md2html/"+str(mode)+'/css/'+str(self._urlsafe_base64_encode(css))
+		interface="md2html/"+str(mode)+'/css/'+bytes_decode(urlsafe_base64_encode(css))
 		resulted_url=url
 		if resulted_url.find("?")>=0:
 			resulted_url+="?"+interface
@@ -259,7 +259,7 @@ class QiniuResourcePersistentMixin(object):
 	def persistent(self,key,fops,notify_url,bucket=None,force=1,pipeline=None):
 		bucket=bucket or self._bucket
 		assert bucket,"bucket can't be none"
-		body=urllib.parse.urlencode({
+		body=urlencode({
 			'bucket':bucket,
 			'key':key,
 			'fops':fops,

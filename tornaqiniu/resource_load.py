@@ -5,6 +5,7 @@ import hashlib
 import base64
 from datetime import datetime
 from .errors import EncodingError,PolicyKeyError,PolicyValueTypeError
+from .utils import urlsafe_base64_encode,bytes_encode,bytes_decode,hmac_sha1,json_encode,json_decode
 from . import PUT_POLICY
 class QiniuResourceLoadMixin(object):	
 	def upload_token(self,bucket=None,key=None,expires=3600,policys=None):
@@ -21,12 +22,12 @@ class QiniuResourceLoadMixin(object):
 		if 'deadline' not in self._policys:
 			self._policys['deadline']=int(datetime.timestamp(datetime.now()))+expires	
 		#josn encode policys
-		json_policys=self._json_encode(self._policys)
+		json_policys=json_encode(self._policys)
 		#base64 encode
-		b64_encoded_policys=self._urlsafe_base64_encode(json_policys)	
-		sha1_sign=self._hmac_sha1(self._secret_key,b64_encoded_policys)
-		b64_encoded_sign=self._urlsafe_base64_encode(sha1_sign)
-		upload_token=self._access_key+":"+self._bytes_decode(b64_encoded_sign)+":"+self._bytes_decode(b64_encoded_policys)
+		b64_encoded_policys=urlsafe_base64_encode(json_policys)	
+		sha1_sign=hmac_sha1(self._secret_key,b64_encoded_policys)
+		b64_encoded_sign=urlsafe_base64_encode(sha1_sign)
+		upload_token=self._access_key+":"+bytes_decode(b64_encoded_sign)+":"+bytes_decode(b64_encoded_policys)
 		self._policys={}
 		return upload_token
 	def _check_policy(self,field,value):
@@ -51,9 +52,9 @@ class QiniuResourceLoadMixin(object):
 		if not host.startswith("http://"):
 			host="http://"+host
 		download_url=host+'/'+key+"?e="+str(int(datetime.timestamp(datetime.now()))+expires)
-		sha1_sign=self._hmac_sha1(self._secret_key,download_url)
-		b64_encoded_sign=self._urlsafe_base64_encode(sha1_sign)
-		token=self._access_key+":"+self._bytes_decode(b64_encoded_sign)
+		sha1_sign=hmac_sha1(self._secret_key,download_url)
+		b64_encoded_sign=urlsafe_base64_encode(sha1_sign)
+		token=self._access_key+":"+bytes_decode(b64_encoded_sign)
 		download_url+="&token="+token
 		return download_url
 	def private_url(self,key,expires=3600,host=None):
@@ -82,7 +83,7 @@ class QiniuResourceLoadMixin(object):
 		if isinstance(keys,(list,tuple)):
 			if key_name:
 				for key in keys:
-					download_urls.append(self._gen_private_url(key[key_name]),expires,host))
+					download_urls.append(self._gen_private_url(key[key_name]),expires,host)
 			else:
 				for key in keys:
 					download_urls.append(self._gen_private_url(key,expires,host))
