@@ -4,7 +4,7 @@ import base64
 import hmac
 import json
 from .errors import *
-
+import urllib
 
 def json_encode(need_encode):
 	return json.dumps(need_encode)
@@ -35,5 +35,6 @@ def hmac_sha1(key,data):
 	bytes_key=bytes_encode(key)
 	bytes_data=bytes_encode(data)
 	return hmac.new(bytes_key,bytes_data,'sha1').digest()
-
+def urlencode(need_encode):
+	return urllib.parse.urlencode(need_encode)
 	
