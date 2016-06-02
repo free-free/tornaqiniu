@@ -2,7 +2,7 @@
 from tornado import gen,httpclient
 import hmac
 import base64
-
+import urllib
 
 
 class QiniuImageProcessMixin(object):
@@ -225,6 +225,10 @@ class QiniuResourceQRCodeMixin(object):
 		return resulted_url
 	def qr_code(self,url,mode=0,level=1):
 		return self._generate_qrcode(url,mode,level)
+
+
+
+
 class QiniuResourceMDToHTMLMixin(object):
 	"""
 		convert mardown to html
@@ -242,5 +246,29 @@ class QiniuResourceMDToHTMLMixin(object):
 			resulted_url+='&'+interface
 		return resulted_url
 	
-	
-	
+class QiniuResourcePersistentMixin(object):
+	@gen.coroutine
+	def _send_persistent_request(self,url_path,host="api.qiniu.com",body=None,method=None):
+		url="http://"+host+url_path
+		headers={}
+		headers['Authorization']=self._authorization(url_path,body)
+		headers['Host']=host
+		response=yield self._send_async_request(url,headers=headers,method=method or "POST",body=body)
+		return response	
+	@gen.coroutine
+	def persistent(self,key,fops,notify_url,bucket=None,force=1,pipeline=None):
+		bucket=bucket or self._bucket
+		assert bucket,"bucket can't be none"
+		body=urllib.parse.urlencode({
+			'bucket':bucket,
+			'key':key,
+			'fops':fops,
+			'notifyURL':notify_url,
+			'pipeline':pipeline or "",
+			'force':force
+		})
+		response=yield self._send_persistent_request('/pfop/',body=body)
+		return response
+		
+
+			
