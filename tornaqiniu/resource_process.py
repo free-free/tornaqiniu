@@ -161,7 +161,26 @@ class QiniuImageProcessMixin(object):
 		url=self.imageinfo_url(origin_url)
 		response=yield self._send_async_request(url)
 		return response
-							
+	def imageexif_url(self,origin_url):
+		if origin_url.find("?")>=0:
+			return origin_url+'&exif'
+		else:
+			return origin_url+'?exif'
+	def multi_imageexif_url(self,urls,key_name=None):
+		if isinstance(urls,(list,tuple)):
+			exif_urls=[]
+			if key_name:
+				for url in urls:
+					exif_urls.append(self.imageexif_url(url[key_name]))
+			else:
+				for url in urls:
+					exif_urls.append(self.imageexif_url(url))
+			return exif_urls
+	@gen.coroutine
+	def get_imageexif(self,origin_url):
+		url=self.imageexif_url(origin_url)
+		response=yield self._send_async_request(url)
+		return response							
 
 class QiniuResourceQRCodeMixin(object):
 	_level_map={1:"L",2:"M",3:"Q",4:"H"}
