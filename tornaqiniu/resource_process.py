@@ -134,8 +134,8 @@ class QiniuImageProcessMixin(object):
 		return resulted_url
 	def multi_watermark(self,origin_url,*args):
 		"""
-			multi watermakr parameters are too much,
-			so i decided to implement it at next time.
+			multi watermark parameters are too much,
+			so i decided to implement it at the next time.
 		"""
 		pass
 	def imageinfo_url(self,origin_url):
