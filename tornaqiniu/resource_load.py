@@ -80,12 +80,12 @@ class QiniuResourceLoadMixin(object):
 		"""
 		download_urls=[]
 		if isinstance(keys,(list,tuple)):
-			for key in keys:
-				download_urls.append(self._gen_private_url(key,expires,host))
-			return download_urls
-		elif isinstance(keys,dict) and key_name:
-			for field in keys.items():
-				download_urls.append(self._gen_private_url(field[key_name],expires,host))
+			if key_name:
+				for key in keys:
+					download_urls.append(self._gen_private_url(key[key_name]),expires,host))
+			else:
+				for key in keys:
+					download_urls.append(self._gen_private_url(key,expires,host))
 		else:
 			pass
 		return download_urls
@@ -113,12 +113,12 @@ class QiniuResourceLoadMixin(object):
 		"""
 		download_urls=[]
 		if isinstance(keys,(tuple,list)):
-			for key in keys:
-				download_urls.append(self._gen_public_url(key,host))
-			return download_urls
-		elif isinstance(keys,dict) or key_name:
-			for field in keys.itmes():
-				download_urls.append(self._gen_public_url(field[key_name],host))
+			if key_name:
+				for key in keys:
+					download_urls.append(self._gen_public_url(key[key_name],host))
+			else:
+				for key in keys:
+					download_urls.append(self._gen_public_url(key,host))
 		else:
 			pass
 		return download_urls	
