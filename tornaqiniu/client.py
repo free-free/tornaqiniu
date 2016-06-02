@@ -53,12 +53,13 @@ class QiniuClient(
 			pass
 		return hmac.new(key,data,'sha1').digest()
 	@gen.coroutine
-	def _send_async_request(self,url,method="GET",body=None):
-		headers={}
+	def _send_async_request(self,url,headers=None,method="GET",body=None):
+		headers=headers or {}
 		if body or method.upper()=="POST":
 			headers['Content-Type']="application/x-www-form-urlencoded"
 		req=httpclient.HTTPRequest(url,method=method,body=body,headers=headers,allow_nonstandard_methods=True)
 		http_request=AsyncHTTPClient()
+		response=""
 		try:
 			response=yield http_request.fetch(req)
 		except httpclient.HTTPError as e:
