@@ -6,6 +6,7 @@ from .resource_manage import QiniuResourseManageMixin
 from .resource_load import QiniuResourceLoadMixin
 from .resource_process import QiniuImageProcessMixin,QiniuResourceQRCodeMixin
 from .errors import EncodingError
+from .utils import bytes_encode,bytes_decode,urlsafe_base64_encode,json_encode,json_decode,hmac_sha1
 import base64
 import hmac
 class QiniuClient(
@@ -23,35 +24,6 @@ class QiniuClient(
 		self._bucket=bucket
 		self._download_host=download_host
 		self._policys={}
-	def _urlsafe_base64_encode(self,policy):
-		if isinstance(policy,str):
-			return base64.urlsafe_b64encode(self._bytes_encode(policy))
-		elif isinstance(policy,bytes):
-			return base64.urlsafe_b64encode(policy)
-		else:
-			raise EncodingError("'policy' must be str or bytes type")
-	def _json_encode(self,need_encode):
-			return json.dumps(need_encode)
-	def _json_decode(self,need_decode):
-			return json.loads(need_decode)
-	def _bytes_encode(self,need_encode):
-			return need_encode.encode("utf-8")
-	def _bytes_decode(self,need_decode):
-			return need_decode.decode("utf-8")		
-	def _hmac_sha1(self,key,data):
-		if isinstance(key,str):
-			key=self._bytes_encode(key)
-		elif not isinstance(key,bytes):
-			raise EncodingError("'key' must be 'str' or 'bytes' type")
-		else:
-			pass
-		if isinstance(data,str):
-			data=self._bytes_encode(data)
-		elif not isinstance(data,bytes):
-			raise EncodingError("'data' must be 'str' or 'bytes' type")
-		else:
-			pass
-		return hmac.new(key,data,'sha1').digest()
 	@gen.coroutine
 	def _send_async_request(self,url,headers=None,method="GET",body=None):
 		headers=headers or {}
@@ -74,16 +46,16 @@ class QiniuClient(
 		signing_str=url_path+"\n"
 		if body:
 			signing_str=signing_str+body
-		sign=hmac.new(self._secret_key.encode("utf-8"),signing_str.encode("utf-8"),'sha1')
-		encoded_sign=base64.urlsafe_b64encode(sign.digest())
-		access_token=self._access_key+":"+encoded_sign.decode("utf-8")
+		sign=hmac_sha1(self._secret_key,signing_str)
+		encoded_sign=urlsafe_base64_encode(sign)
+		access_token=self._access_key+":"+bytes_decode(encoded_sign)
 		return access_token
 	def _authorization(self,url_path,body=None):
 		""" return http header for "Authorization" """
 		return "QBox "+self._access_token(url_path,body)
 	def _encode_entry(self,entry):
 		""" encode entry"""
-		return self._urlsafe_base64_encode(entry)
+		return urlsafe_base64_encode(entry)
 
 
 
