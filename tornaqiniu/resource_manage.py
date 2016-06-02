@@ -16,30 +16,18 @@ class QiniuResourseManageMixin(object):
 			"Authorization":self._authorization(url_path,body),
 			"Host":host
 		}
-		if body or method=="POST":
-			headers["Content-Type"]="application/x-www-form-urlencoded"
-		req=httpclient.HTTPRequest(url,method=method or "GET",body=body,headers=headers,allow_nonstandard_methods=True)
-		http_request=AsyncHTTPClient()
-		try:
-			response=yield http_request.fetch(req)
-		except httpclient.HTTPError as e:
-			print("Error:"+str(e))
-		except Exception as e:
-			print("Error:"+str(e))
-		else:
-			return response.body.decode()
-		finally:	
-			http_request.close()
+		response=yield self._send_async_request(url,headers=headers,method=method or "GET",body=body)
+		return response
 	@gen.coroutine
 	def stat(self,bucket,key):
 		entry=bucket+":"+key
-		encoded_entry=self._encode_entry(entry)
+		encoded_entry=self._bytes_decode(self._encode_entry(entry))
 		response= yield self._send_manage_request("/stat/"+encoded_entry)
 		return response
 	@gen.coroutine
 	def move(self,src_bucket,src_key,dest_bucket,dest_key):
-		src_entry=self._encode_entry(src_bucket+':'+src_key)
-		dest_entry=self._encode_entry(dest_bucket+':'+dest_key)
+		src_entry=self._bytes_decode(self._encode_entry(src_bucket+':'+src_key))
+		dest_entry=self._bytes_decode(self._encode_entry(dest_bucket+':'+dest_key))
 		response=yield self._send_manage_request("/move/"+src_entry+'/'+dest_entry,method="POST")
 		return response
 	@gen.coroutine
@@ -48,13 +36,13 @@ class QiniuResourseManageMixin(object):
 
 	@gen.coroutine
 	def copy(self,src_bucket,src_key,dest_bucket,dest_key):
-		src_encoded_entry=self._encode_entry(src_bucket+":"+src_key)
-		dest_encoded_entry=self._encode_entry(dest_bucket+":"+dest_key)
+		src_encoded_entry=self._bytes_decode(self._encode_entry(src_bucket+":"+src_key))
+		dest_encoded_entry=self._bytes_decode(self._encode_entry(dest_bucket+":"+dest_key))
 		response=yield self._send_manage_request("/copy/"+src_encoded_entry+"/"+dest_encoded_entry,method="POST")
 		return response
 	@gen.coroutine
 	def delete(self,bucket,key):
-		encoded_entry=self._encode_entry(bucket+":"+key)
+		encoded_entry=self._bytes_decode(self._encode_entry(bucket+":"+key))
 		response =yield self._send_manage_request("/delete/"+encoded_entry,method="POST")
 		return response
 	@gen.coroutine
@@ -72,10 +60,10 @@ class QiniuResourseManageMixin(object):
 	@gen.coroutine
 	def fetch_store(self,fecth_url,bucket,key=None):
 		if key:
-			encoded_entry=self._encode_entry(bucket+":"+key)
+			encoded_entry=self._bytes_decode(self._encode_entry(bucket+":"+key))
 		else:
-			encode_entry=self._encode_entry(bucket)
-		encoded_fecth_url=self._encode_entry(fetch_url)
+			encode_entry=self._bytes_decode(self._encode_entry(bucket))
+		encoded_fecth_url=self._bytes_decode(self._encode_entry(fetch_url))
 		response=yield self._send_manage_request('/fetch/'+encoded_fetch_url+'/to/'+encoded_entry,host='iovip.qbox.me',method="POST")
 		return response
 	@gen.coroutine
@@ -88,7 +76,7 @@ class QiniuResourseManageMixin(object):
 		return response
 	@gen.coroutine
 	def prefecth(self,bucket,key):
-		encoded_entry=self._encode_entry(bucket+':'+key)
+		encoded_entry=self._bytes_decode(self._encode_entry(bucket+':'+key))
 		response=yield self._send_manage_request('/prefecth/'+encoded_entry,method="POST",host="iovip.qbox.me")
 		return response
 	
