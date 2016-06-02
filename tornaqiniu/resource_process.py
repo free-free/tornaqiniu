@@ -181,8 +181,28 @@ class QiniuImageProcessMixin(object):
 		url=self.imageexif_url(origin_url)
 		response=yield self._send_async_request(url)
 		return response							
+	def imageave_url(self,origin_url):
+		if origin_url.find("?")>=0:
+			return origin_url+'&imageAve'
+		else:
+			return origin_url+'?imageAve'
+	def multi_imageave_url(self,urls,key_name):
+		if  isinstance(urls,(list,tuple)):
+			ave_urls=[]
+			if key_name:
+				for url in urls:
+					ave_urls.append(self.imageave_url(url[key_name]))
+			else:
+				for url in urls:
+					ave_urls.append(self.iamgeave_url(url))
+			return ave_urls
+	@gen.coroutine
+	def get_imageave(self,origin_url):
+		url=self.imageave_url(origin_url)
+		response=yield self._send_async_request(url)
+		return response
 
-class QiniuResourceQRCodeMixin(object):
+class QiniuResourceQRCodeMixin(object):	
 	_level_map={1:"L",2:"M",3:"Q",4:"H"}
 	def _generate_qrcode(self,download_url,mode,level):
 		r"""
