@@ -8,22 +8,12 @@ import urllib
 from urllib import request
 
 class QiniuResourseManageMixin(object):
-	def _encode_entry(self,entry):
-		return self._urlsafe_base64_encode(entry)
-	def _access_token(self,url_path,body=None):
-		signing_str=url_path+"\n"
-		if body:
-			signing_str=signing_str+body
-		sign=hmac.new(self._secret_key.encode("utf-8"),signing_str.encode("utf-8"),'sha1')
-		encoded_sign=base64.urlsafe_b64encode(sign.digest())
-		access_token=self._access_key+":"+encoded_sign.decode("utf-8")
-		return access_token
 	@gen.coroutine
 	def _send_manage_request(self,url_path,host="rs.qiniu.com",body=None,method=None):
 		full_host="http://"+host
 		url=full_host+url_path
 		headers={
-			"Authorization":"QBox "+self._access_token(url_path,body),
+			"Authorization":self._authorization(url_path,body),
 			"Host":host
 		}
 		if body or method=="POST":
