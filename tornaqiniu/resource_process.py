@@ -138,7 +138,30 @@ class QiniuImageProcessMixin(object):
 			so i decided to implement it at next time.
 		"""
 		pass
-				
+	def imageinfo_url(self,origin_url):
+		if origin_url.find("?")>=0:
+			return origin_url+"&imageInfo"
+		else:
+			return origin_url+"?imageInfo"
+	def multi_imageinfo_url(self,urls,key_name=None):
+		if isinstance(urls,(list,tuple)):
+			info_urls=[]
+			if key_name:
+				# for 'list' or 'tuple' like this:[{"key1":"xx","key2":"21"},{..},{..},...]
+				for url in urls:
+					info_urls.append(self.imageinfo_url(url[key_name]))
+			else:
+				# for 'list' or 'tuple'  like this: [url1,url2,....]
+				for url in urls:
+					info_urls.append(self.imageinfo_url(url))
+			return info_urls
+		return None
+	@gen.coroutine
+	def get_imageinfo(self,origin_url):
+		url=self.imageinfo_url(origin_url)
+		response=yield self._send_async_request(url)
+		return response
+							
 
 class QiniuResourceQRCodeMixin(object):
 	_level_map={1:"L",2:"M",3:"Q",4:"H"}
