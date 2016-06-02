@@ -1,7 +1,5 @@
 ## Description
-> tornaqiniu is a qiniu cloud storage client for tornado
-
---------------
+	tornaqiniu is a qiniu cloud storage client for tornado
 
 ## Get Started:
 ```python
@@ -17,7 +15,6 @@ client.upload_token()
 client.private_url("resource key")
 
 ```
-----
 
 ## Updating
 	..............
