@@ -69,6 +69,21 @@ class QiniuClient(
 		finally:
 			http_request.close()
 
+	def _access_token(self,url_path,body=None):
+		""" access token for Authorization"""
+		signing_str=url_path+"\n"
+		if body:
+			signing_str=signing_str+body
+		sign=hmac.new(self._secret_key.encode("utf-8"),signing_str.encode("utf-8"),'sha1')
+		encoded_sign=base64.urlsafe_b64encode(sign.digest())
+		access_token=self._access_key+":"+encoded_sign.decode("utf-8")
+		return access_token
+	def _authorization(self,url_path,body=None):
+		""" return http header for "Authorization" """
+		return "QBox "+self._access_token(url_path,body)
+	def _encode_entry(self,entry):
+		""" encode entry"""
+		return self._urlsafe_base64_encode(entry)
 
 
 
