@@ -2,9 +2,9 @@
 from tornado import gen,httpclient
 from tornado.httpclient import AsyncHTTPClient
 import json
-from .resource_manage import QiniuResourseManageMixin
-from .resource_load import QiniuResourceLoadMixin
-from .resource_process import QiniuImageProcessMixin,QiniuResourceQRCodeMixin
+from .resource_manage import  QiniuResourseManageMixin
+from .resource_load import    QiniuResourceLoadMixin
+from .resource_process import QiniuImageProcessMixin,QiniuResourcePersistentMixin,_QiniuResourceOpsInterface,QiniuAVProcessMixin
 from .errors import EncodingError
 from .utils import bytes_encode,bytes_decode,urlsafe_base64_encode,json_encode,json_decode,hmac_sha1
 import base64
@@ -13,7 +13,9 @@ class QiniuClient(
 		QiniuResourseManageMixin,
 		QiniuResourceLoadMixin,
 		QiniuImageProcessMixin,
-		QiniuResourceQRCodeMixin	
+		QiniuAVProcessMixin,
+		QiniuResourcePersistentMixin,
+		_QiniuResourceOpsInterface,	
 		):
 	def __init__(self,access_key,secret_key,download_host=None,bucket=None):
 		assert isinstance(access_key,(str,bytes))
