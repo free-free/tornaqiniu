@@ -247,7 +247,22 @@ class QiniuResourceMDToHTMLMixin(object):
 		else:
 			resulted_url+='&'+interface
 		return resulted_url
+
+class QiniuResourceAVMixin(object):
+	def avinfo_url(self,av_url):
+		if av_url.find("?")>=0:
+			return av_url+"&avinfo"
+		else:
+			return av_url+"?avinfo"
+	@gen.coroutine
+	def get_avinfo(self,av_url):
+		avinfo_url=self.avinfo_url(av_url)
+		response=yield self._send_async_request(avinfo_url)
+		if response:
+			return json_decode(response)
+		return None
 	
+		
 class QiniuResourcePersistentMixin(object):
 	@gen.coroutine
 	def _send_persistent_request(self,url_path,host="api.qiniu.com",body=None,method=None):
