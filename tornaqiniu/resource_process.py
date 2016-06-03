@@ -151,7 +151,11 @@ class _QiniuResourceOpsInterface(object):
 			'options' detail definition refer to:
 				http://developer.qiniu.com/code/v6/api/dora-api/av/segtime.html
 		"""
-		interface="avthumb/m3u8/noDomain/%s"str(if int(no_domain)>0 1 else 0)
+		if int(no_domain)>0:
+			no_domain=1
+		else:
+			no_domain=0
+		interface="avthumb/m3u8/noDomain/%s"%str(no_domain)
 		if len(options)>0:
 			interface+=self._options_dict_to_str(options)
 		return interface
@@ -388,7 +392,10 @@ class _PersistentWrapper(object):
 	def set_notify_url(self,url):
 		self.__notify_url=url
 	def set_force(self,force):
-		self.__force=if force >0 1 else 0
+		if int(force)>0:
+			self.__force=1
+		else:
+			self.__force=0
 	def set_key(self,key):
 		self.__key=key
 	def set_bucket(self,bucket):

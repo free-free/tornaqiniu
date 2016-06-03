@@ -7,6 +7,15 @@ import hmac
 import urllib
 from urllib import request
 from .utils import *
+class _Batch(object):
+	def __init__(self,client):
+		self.__client=client
+		self.__operations=[]
+	@gen.coroutine
+	def execute(self):
+		pass
+	def __setattr__(self,attr,value):
+		pass
 class QiniuResourseManageMixin(object):
 	@gen.coroutine
 	def _send_manage_request(self,url_path,host="rs.qiniu.com",body=None,method=None):
