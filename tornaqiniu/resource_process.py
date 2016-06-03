@@ -415,6 +415,12 @@ class QiniuResourcePersistentMixin(object):
 				
 		"""
 		return _PersistentWrapper(self,key,fops,notify_url,bucket,force,pipeline)
-		
+	@gen.coroutine
+	def prefop(self,persistent_id):
+		url_path="/status/get/prefop?id=%s"%str(persistent_id)
+		response=yield self._send_persistent_request(url_path,method="GET")	
+		if response:
+			return json_decode(response)
+
 
 			
