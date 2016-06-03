@@ -353,6 +353,9 @@ class QiniuResourceAVMixin(object):
 	
 
 class _PersistentWrapper(object):
+	"""
+		make persistent operation 'pipeline' like executing
+	"""
 	def __init__(self,client_obj,key,fops,notify_url,bucket,force,pipeline):
 		self.__client=client_obj
 		self.__key=key
