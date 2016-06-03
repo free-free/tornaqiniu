@@ -351,7 +351,49 @@ class QiniuResourceAVMixin(object):
 			return json_decode(response)
 		return None
 	
-		
+
+class _PersistentWrapper(object):
+	def __init__(self,client_obj,key,fops,notify_url,bucket,force,pipeline):
+		self.__client=client_obj
+		self.__key=key
+		self.__fops=[]
+		self.__fops.extend(fops or "")
+		self.__notify_url=notify_url
+		self.__bucket=bucket or self.__client._bucket
+		self.__force=force
+		self.__pipeline=pipeline
+	@gen.coroutine
+	def execute(self):
+		assert self.__bucket,"bucket can't be none"
+		assert len(self.__fops)>0,"fops can't be none"
+		self.__fops=reduce(lambda op1,op2:str(op1)+';'+str(op2),self.__fops)		
+		body=urlencode({
+			'bucket':self.__bucket,
+			'key':self.__key,
+			'fops':self.__fops,
+			'notifyURL':self.__notify_url,
+			'pipeline':self.__pipeline or "",
+			'force':self.__force
+		})	
+		response=yield 	self.__client._send_persistent_request('/pfop/',body=body,method="POST")
+		if response:
+			return json_decode(response)
+		return None
+	def add_fops(self,ops):
+		self.__fops.append(ops)	
+	def add_multi_fops(self,ops_list):
+		self.__fops.extend(list(ops_lsit))
+	def set_pipeline(self,pipeline):
+		self.__pipeline=pipeline
+	def set_notify_url(self,url):
+		self.__notify_url=url
+	def set_force(self,force):
+		self.__force=if force >0 1 else 0
+	def set_key(self,key):
+		self.__key=key
+	def set_bucket(self,bucket):
+		self.__bucket=bucket
+	
 class QiniuResourcePersistentMixin(object):
 	@gen.coroutine
 	def _send_persistent_request(self,url_path,host="api.qiniu.com",body=None,method=None):
@@ -361,20 +403,18 @@ class QiniuResourcePersistentMixin(object):
 		headers['Host']=host
 		response=yield self._send_async_request(url,headers=headers,method=method or "POST",body=body)
 		return response	
-	@gen.coroutine
-	def persistent(self,key,fops,notify_url,bucket=None,force=1,pipeline=None):
-		bucket=bucket or self._bucket
-		assert bucket,"bucket can't be none"
-		body=urlencode({
-			'bucket':bucket,
-			'key':key,
-			'fops':fops,
-			'notifyURL':notify_url,
-			'pipeline':pipeline or "",
-			'force':force
-		})
-		response=yield self._send_persistent_request('/pfop/',body=body)
-		return response
+	def persistent(self,key,notify_url,fops=None,bucket=None,force=1,pipeline=None):
+		""" 
+			Usage:
+			
+				client=QiniuClient('access_key','secret_key',bucket='your bucket')
+				persistent=client.persistent('image/java.jpg',notify_url)
+				persistent.add_fops(client.text_watermark_interface("hello"))
+				yield persistent.execute()
+			
+				
+		"""
+		return _PersistentWrapper(self,key,fops,notify_url,bucket,force,pipeline)
 		
 
 			
