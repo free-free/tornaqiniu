@@ -132,7 +132,84 @@ class _QiniuResourceOpsInterface(object):
 		assert int(level) in [1,2,3,4],"'level' must range from 1 to 4"
 		interface="qrcode/"+str(mode)+'/level/'+str(_level_map.get(level))
 		return interface
+	def avthumb_transcoding_interface(self,frmt,**options):
+		"""
+			The  'options' parameter  detail definition refers to :
+				 http://developer.qiniu.com/code/v6/api/dora-api/av/avthumb.html
+		"""
+		interface="avthumb/%s"%str(frmt)
+		if len(options)>0:
+			interface+=self._options_dict_to_str(options)
+		return interface
+	def _options_dict_to_str(self,options):
+		options_list=list(options.items())
+		options_list=list(map(lambda item:"/"+str(item[0])+"/"+str(item[1]),options_list))
+		options_str=reduce(lambda op1,op2:op1+op2,options_list)
+		return options_str
+	def avthumb_slice_interface(self,no_domain,**options):
+		"""
+			'options' detail definition refer to:
+				http://developer.qiniu.com/code/v6/api/dora-api/av/segtime.html
+		"""
+		interface="avthumb/m3u8/noDomain/%s"str(if int(no_domain)>0 1 else 0)
+		if len(options)>0:
+			interface+=self._options_dict_to_str(options)
+		return interface
+	def avconcat_interface(self,mode,frmt,*encoded_urls):
+		"""
+			detail refer to:
+				http://developer.qiniu.com/code/v6/api/dora-api/av/avconcat.html
+		"""
+		interface="avconcat/"+str(mode)+'/format/'+str(frmt)
+		for encoded_url in encoded_urls:
+			interface+='/'+encoded_url
+		return interface
+	def vframe_interface(self,out_img_frmt,offset,width=None,heigth=None,rotate=None):
+		"""
+			detail definition refer to:
+				http://developer.qiniu.com/code/v6/api/dora-api/av/vframe.html
+		"""
+		interface='vframe/'+str(out_img_frmt)+'/offset/'+str(offset)
+		if width:
+			assert width>=1 and width<=3840
+			interface+='/w/'+str(width)
+		if heigth:
+			assert heigth>=1 and height<=2160
+			interface+='/h/'+str(height)
+		if rotate:
+			assert rotate in [90,180,270,'auto']
+			interface+='/rotate/'+str(rotate)
+		return interface
+	def vsample_interface(self,out_img_frmt,
+			     start_second,
+			     sample_time,
+			     resolution_width=None,
+		             resolution_height=None,
+			     rotate=None,
+			     sample_interval=None,
+			     pattern=None):
+		"""
+			detail definition refer to:
+				http://developer.qiniu.com/code/v6/api/dora-api/av/vsample.html
+		"""
+		interface="vsample/"+str(out_img_frmt)+'/ss/'+str(start_second)
+		interface+='/t/'+str(sample_time)
+		if resolution_width and resolution_height:
+			assert resolution_width>=1 and resolution_width<=1920
+			assert resolution_height>=1 and resolution_height<=1080
+			interface+='/s/'+str(resolution_width)+'x'+str(resolution_height)
+		if rotate:
+			assert rotate in (90,180,270,'auto')
+			interface+='/rotate/'+str(rotate)
+		if sample_interval:
+			interface+='/interval/'+str(sample_intervale)
+		if pattern:
+			interface+=bytes_decode(urlsafe_base64_encode(pattern))
+		return 	interface
 	
+
+			
+			 	
 class QiniuImageProcessMixin(object):
 	def image_view2(self,url,mode,width=None,height=None,frmt=None,interlace=0,quality=75,ignore_error=0):
 		interface=self.image_view2_interface(mode,width,height,frmt,interlace,quality,ignore_error)
