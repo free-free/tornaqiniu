@@ -208,9 +208,18 @@ class _QiniuResourceOpsInterface(object):
 		return 	interface
 	
 
-			
-			 	
-class QiniuImageProcessMixin(object):
+	
+class QiniuProcessBaseMixin(object):
+	def qrcode_url(self,url,mode=0,level=1):
+		resulted_url=url
+		interface=self.qrcode_interface(mode,level)
+		if url.find("?")>=0:
+			resulted_url+='&'+interface
+		else:
+			resulted_url+='?'+interface
+		return resulted_url
+
+class QiniuImageProcessMixin(QiniuProcessBaseMixin):
 	def image_view2(self,url,mode,width=None,height=None,frmt=None,interlace=0,quality=75,ignore_error=0):
 		interface=self.image_view2_interface(mode,width,height,frmt,interlace,quality,ignore_error)
 		resulted_url=url
@@ -308,18 +317,6 @@ class QiniuImageProcessMixin(object):
 		if response:
 			return json_decode(response).get("RGB")
 
-class QiniuResourceQRCodeMixin(object):	
-	def qrcode_url(self,url,mode=0,level=1):
-		resulted_url=url
-		interface=self.qrcode_interface(mode,level)
-		if url.find("?")>=0:
-			resulted_url+='&'+interface
-		else:
-			resulted_url+='?'+interface
-		return resulted_url
-
-
-
 class QiniuResourceMDToHTMLMixin(object):
 	"""
 		convert mardown to html
@@ -337,7 +334,7 @@ class QiniuResourceMDToHTMLMixin(object):
 			resulted_url+='&'+interface
 		return resulted_url
 
-class QiniuResourceAVMixin(object):
+class QiniuAVProcessMixin(QiniuProcessBaseMixin):
 	def avinfo_url(self,av_url):
 		if av_url.find("?")>=0:
 			return av_url+"&avinfo"
