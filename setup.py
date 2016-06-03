@@ -10,5 +10,5 @@ setup(
 	description="An asynchronous qiniu cloud storage client for tornado",
 	license="MIT",
 	packages=find_packages(),
-	include_package_data=True,
+	include_package_data=True
 )
