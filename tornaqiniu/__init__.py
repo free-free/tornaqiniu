@@ -29,4 +29,4 @@ PUT_POLICY={
 
 
 from .client import QiniuClient
-
+__all__=("QiniuClient",)
