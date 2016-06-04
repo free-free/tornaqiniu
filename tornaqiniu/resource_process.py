@@ -321,23 +321,6 @@ class QiniuImageProcessMixin(QiniuProcessBaseMixin):
 		if response:
 			return json_decode(response).get("RGB")
 
-class QiniuResourceMDToHTMLMixin(object):
-	"""
-		convert mardown to html
-		@parameters:
-			1.mode:0 or 1
-			2.css: url of css style
-	"""
-	def _md2html_url(self,url,mode,css):
-		assert int(mode)==0 or int(mode)==1,"'mode' must be 0 or 1"
-		interface="md2html/"+str(mode)+'/css/'+bytes_decode(urlsafe_base64_encode(css))
-		resulted_url=url
-		if resulted_url.find("?")>=0:
-			resulted_url+="?"+interface
-		else:
-			resulted_url+='&'+interface
-		return resulted_url
-
 class QiniuAVProcessMixin(QiniuProcessBaseMixin):
 	def avinfo_url(self,av_url):
 		if av_url.find("?")>=0:
