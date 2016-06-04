@@ -11,7 +11,6 @@ from .common import Auth,QiniuResourceOperationBase
 class QiniuResourceLoader(QiniuResourceOperationBase):
 	def __init__(self,bucket,auth):
 		super(QiniuResourceLoader,self).__init__(bucket,auth)
-		self._download_host=""
 		self._policys={}
 	def _check_policy(self,field,value):
 		if policy_field not in PUT_POLICY.keys():
