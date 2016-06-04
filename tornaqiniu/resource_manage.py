@@ -32,7 +32,8 @@ class QiniuResourceManager(QiniuResourceOperationBase):
 		response=yield self.send_async_request(url,headers=headers,method=method or "GET",body=body)
 		return response
 	@gen.coroutine
-	def stat(self,bucket,key):
+	def stat(self,key,bucket=None):
+		bucket=bucket or self._bucket
 		entry=bucket+":"+key
 		encoded_entry=bytes_decode(urlsafe_base64_encode(entry))
 		response= yield self._send_manage_request("/stat/"+encoded_entry)
@@ -54,12 +55,14 @@ class QiniuResourceManager(QiniuResourceOperationBase):
 		response=yield self._send_manage_request("/copy/"+src_encoded_entry+"/"+dest_encoded_entry,method="POST")
 		return response
 	@gen.coroutine
-	def delete(self,bucket,key):
+	def delete(self,key,bucket=None):
+		bucket=bucket or self._bucket
 		encoded_entry=bytes_decode(urlsafe_base64_encode(bucket+":"+key))
 		response =yield self._send_manage_request("/delete/"+encoded_entry,method="POST")
 		return response
 	@gen.coroutine
-	def list(self,bucket,limit=1000,prefix="",delimiter="",marker=""):
+	def list(self,bucket=None,limit=1000,prefix="",delimiter="",marker=""):
+		bucket=bucket or self._bucket
 		assert limit>1 and limit<=1000,"limit must bettween 1 to 1000"
 		query_string=urlencode({
 			'bucket':bucket,
@@ -71,7 +74,8 @@ class QiniuResourceManager(QiniuResourceOperationBase):
 		response=yield self._send_manage_request('/list?'+query_string,host="rsf.qbox.me",method="POST")
 		return response
 	@gen.coroutine
-	def fetch_store(self,fecth_url,bucket,key=None):
+	def fetch_store(self,fecth_url,key=None,bucket=None):
+		bucket=bucket or self._bucket
 		if key:
 			encoded_entry=bytes_decode(urlsafe_base64_encode(bucket+":"+key))
 		else:
@@ -88,7 +92,8 @@ class QiniuResourceManager(QiniuResourceOperationBase):
 		response=yield self._send_manage_request('/batch',method="POST",body=opertions_body)
 		return response
 	@gen.coroutine
-	def prefecth(self,bucket,key):
+	def prefecth(self,key,bucket=None):
+		bucket=bucket or self._bucket
 		encoded_entry=bytes_decode(urlsafe_base64_encode(bucket+':'+key))
 		response=yield self._send_manage_request('/prefecth/'+encoded_entry,method="POST",host="iovip.qbox.me")
 		return response
