@@ -3,33 +3,16 @@ from tornado import gen,httpclient
 import hmac
 import hashlib
 import base64
-from datetime import datetime
-from .errors import EncodingError,PolicyKeyError,PolicyValueTypeError
-from .utils import urlsafe_base64_encode,bytes_encode,bytes_decode,hmac_sha1,json_encode,json_decode
-from . import PUT_POLICY
-class QiniuResourceLoadMixin(object):	
-	def upload_token(self,bucket=None,key=None,expires=3600,policys=None):
-		if not bucket:
-			bucket=self._bucket
-			assert bucket!=None,"bucket can't be empty"
-		if policys:
-			self._policys=policys
-		if 'scope' not in self._policys:
-			if key:
-				self._policys['scope']=bucket+":"+key
-			else:
-				self._policys['scope']=bucket
-		if 'deadline' not in self._policys:
-			self._policys['deadline']=int(datetime.timestamp(datetime.now()))+expires	
-		#josn encode policys
-		json_policys=json_encode(self._policys)
-		#base64 encode
-		b64_encoded_policys=urlsafe_base64_encode(json_policys)	
-		sha1_sign=hmac_sha1(self._secret_key,b64_encoded_policys)
-		b64_encoded_sign=urlsafe_base64_encode(sha1_sign)
-		upload_token=self._access_key+":"+bytes_decode(b64_encoded_sign)+":"+bytes_decode(b64_encoded_policys)
+from   datetime import datetime
+from   .errors import EncodingError,PolicyKeyError,PolicyValueTypeError
+from   .utils import urlsafe_base64_encode,bytes_encode,bytes_decode,hmac_sha1,json_encode,json_decode
+from   . import PUT_POLICY
+from .common import Auth,QiniuResourceOperationBase
+class QiniuResourceLoader(QiniuResourceOperationBase):
+	def __init__(self,bucket,auth):
+		super(QiniuResourceLoader,self).__init__(bucket,auth)
+		self._download_host=""
 		self._policys={}
-		return upload_token
 	def _check_policy(self,field,value):
 		if policy_field not in PUT_POLICY.keys():
 				raise PolicyKeyError("Not support '%s' policy"%policy_field)		
@@ -45,19 +28,20 @@ class QiniuResourceLoadMixin(object):
 	@property
 	def policys(self):
 		return self._policys
-	def _gen_private_url(self,key,expires=3600,host=None):
-		if not host:
-			host=self._download_host
-			assert host!=None,"download host can' be empty"
+	def get_flush_policys(self):
+		policys=self._policys
+		self._policys={}
+		return policys
+	def _gen_private_url(self,key,host,expires=3600):
+		assert host!=None and host!="","download host can' be empty"
 		if not host.startswith("http://"):
 			host="http://"+host
-		download_url=host+'/'+key+"?e="+str(int(datetime.timestamp(datetime.now()))+expires)
-		sha1_sign=hmac_sha1(self._secret_key,download_url)
-		b64_encoded_sign=urlsafe_base64_encode(sha1_sign)
-		token=self._access_key+":"+bytes_decode(b64_encoded_sign)
+		download_url=host+'/'+key
+		token=self._auth.download_token(download_url,expires=expires)
+		download_url+='?e='+str(int(datetime.timestamp(datetime.now()))+expires)
 		download_url+="&token="+token
 		return download_url
-	def private_url(self,key,expires=3600,host=None):
+	def private_url(self,key,host,expires=3600):
 		r"""
 			generate one private url 
 			
@@ -67,7 +51,7 @@ class QiniuResourceLoadMixin(object):
 				host:resource host name
 		"""
 		return self._gen_private_url(key,expires,host)
-	def private_urls(self,keys,expires=3600,host=None,key_name=None):
+	def private_urls(self,keys,host,expires=3600,key_name=None):
 		"""
 			generate multi private urls at the same time
 		
@@ -90,15 +74,13 @@ class QiniuResourceLoadMixin(object):
 		else:
 			pass
 		return download_urls
-	def _gen_public_url(self,key,host=None):
-		if not host:
-			host=self._download_host
-			assert host!=None,"download host can't be empty"
+	def _gen_public_url(self,key,host):
+		assert host!=None and host!=""," host can't be empty"
 		if not host.startswith("http://"):
 			host="http://"+host
 		download_url=host+'/'+key
 		return download_url
-	def public_url(self,key,host=None):
+	def public_url(self,key,host):
 		r"""
 			generate public url 
 			
@@ -107,7 +89,7 @@ class QiniuResourceLoadMixin(object):
 				host:resource host name
 		"""
 		return self._gen_public_url(key,host)
-	def public_urls(self,keys,host=None,key_name=None):
+	def public_urls(self,keys,host,key_name=None):
 		r"""
 			generate multi public url
 			the parameters difinition is same with 'private_urls'
