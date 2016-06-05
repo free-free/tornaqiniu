@@ -9,6 +9,15 @@ from .utils import *
 from . import PUT_POLICY
 from .common import Auth,QiniuResourceOperationBase
 
+
+##################################################################
+#
+# Qiniu Resource Loader that's responsible for uploading resource to
+# bucket or downloading resource from bucket and generate download url
+#
+#
+#################################################################
+
 class QiniuResourceLoader(QiniuResourceOperationBase):
 	def __init__(self,bucket,auth):
 		super(QiniuResourceLoader,self).__init__(bucket,auth)
@@ -118,7 +127,6 @@ class QiniuResourceLoader(QiniuResourceOperationBase):
 		else:
 			pass
 		return download_urls	
-
 	
 	
 class _Batch(object):
@@ -130,7 +138,15 @@ class _Batch(object):
 		pass
 	def __setattr__(self,attr,value):
 		pass
-
+################################################################################
+#
+#
+#Qiniu Resource manager that's responsible for bucket resouce management ,
+#like 'delete','copy','move' and so on
+#
+#
+#
+##############################################################################
 class QiniuResourceManager(QiniuResourceOperationBase):
 	def __init__(self,bucket,auth):
 		super(QiniuResourceManager,self).__init__(bucket,auth)
@@ -212,7 +228,13 @@ class QiniuResourceManager(QiniuResourceOperationBase):
 		return response
 	
 		
-		
+################################################################################
+#
+#
+#Qiniu resource processor that's responsible for bucket resource procession 
+#like 'imageView2','QRCode','Audio/Vedio thumb'
+#		
+#################################################################################
 class _QiniuResourceOpsInterface(object):
 	"""
 		this class defines all qiniu resource prosession interface 
@@ -624,6 +646,14 @@ class QiniuResourceProcessor(QiniuResourceOperationBase,
 		if response:
 			return json_decode(response)
 		
+################################################################################
+#
+#
+#Qiniu bucket resource map class
+#
+#
+#
+###############################################################################
 class Resource(object):
 	r"""
 		A map class  to qiniu bucket resource
