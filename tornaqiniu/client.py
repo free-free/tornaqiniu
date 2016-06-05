@@ -2,9 +2,7 @@
 from tornado import gen,httpclient
 from tornado.httpclient import AsyncHTTPClient
 import json
-from .resource_manage import  QiniuResourceManager
-from .resource_load import    QiniuResourceLoader
-from .resource_process import QiniuResourceProcessor,_QiniuResourceOpsInterface
+from .resource import *
 from .errors import EncodingError
 from .utils import bytes_encode,bytes_decode,urlsafe_base64_encode,json_encode,json_decode,hmac_sha1
 from .common import Auth
@@ -12,13 +10,13 @@ import base64
 import hmac
 
 class QiniuClient(object):
-	def __init__(self,access_key,secret_key,download_host=None,bucket=None):
+	def __init__(self,access_key,secret_key,download_host=None,bucket=None,bucket_acp=0):
 		self._auth=Auth(access_key,secret_key)
-		self._resource_manager=QiniuResourceManager(bucket,self._auth)
-		self._resource_loader=QiniuResourceLoader(bucket,self._auth)
-		self._resource_processor=QiniuResourceProcessor(bucket,self._auth)
 		self._bucket=bucket
 		self._download_host=download_host
+		self._bucket_acp=bucket_acp
+	def bucket(self,bucket_name,bucket_acp=0):
+		Bucket(self._auth,bucket_name,bucket_acp)
 	def upload_token(self,bucket=None,key=None,expires=3600,policys=None):
 		bucket=bucket or self._bucket
 		assert bucket!=None and bucket!="","invalid bucket"
