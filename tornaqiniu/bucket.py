@@ -33,7 +33,7 @@ class Bucket(object):
 		self.__res_manager=QiniuResourceManager(self.__auth,self.__bucket_name)
 		self.__res_processor=QiniuResourceProcessor(self.__atuh,self.__bucket_name)
 		self._res_instance=None
-	@property:
+	@property
 	def acp(self):
 		return self.__bucket_acp
 	def resource(self,res_key):
