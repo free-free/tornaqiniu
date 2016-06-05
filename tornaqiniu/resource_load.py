@@ -24,8 +24,21 @@ class QiniuResourceLoader(QiniuResourceOperationBase):
 		for key,value in policy_pairs.items():
 			self._check_policy(key,value)
 			self._policys[key]=value
+	def delete_policy(self,field):
+		if field in self._policys:
+			del self._policys[field]
+	def delete_policys(self,fields):
+		for field in fields:
+			self.delete_policy(field)
+	def delete_all_policys(self):
+		del self._policys
+		self._policys={}
+	def modify_policy(self,field,value):
+		self._policys[field]=value
 	@property
 	def policys(self):
+		return self._policys
+	def get_policys(self):
 		return self._policys
 	def get_flush_policys(self):
 		policys=self._policys
