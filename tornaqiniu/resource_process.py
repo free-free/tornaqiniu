@@ -4,7 +4,7 @@ import hmac
 import base64
 import urllib
 from .utils import *
-
+from .common import *
 
 class _QiniuResourceOpsInterface(object):
 	"""
@@ -213,17 +213,8 @@ class _QiniuResourceOpsInterface(object):
 	
 
 	
-class QiniuProcessBaseMixin(object):
-	def qrcode_url(self,url,mode=0,level=1):
-		resulted_url=url
-		interface=self.qrcode_interface(mode,level)
-		if url.find("?")>=0:
-			resulted_url+='&'+interface
-		else:
-			resulted_url+='?'+interface
-		return resulted_url
 
-class QiniuImageProcessMixin(QiniuProcessBaseMixin):
+class QiniuImageProcessMixin:
 	def image_view2(self,url,mode,width=None,height=None,frmt=None,interlace=0,quality=75,ignore_error=0):
 		interface=self.image_view2_interface(mode,width,height,frmt,interlace,quality,ignore_error)
 		resulted_url=url
@@ -276,7 +267,7 @@ class QiniuImageProcessMixin(QiniuProcessBaseMixin):
 	@gen.coroutine
 	def get_imageinfo(self,origin_url):
 		url=self.imageinfo_url(origin_url)
-		response=yield self._send_async_request(url)
+		response=yield self.send_async_request(url)
 		if response:
 			return json_decode(response)
 	def imageexif_url(self,origin_url):
@@ -297,7 +288,7 @@ class QiniuImageProcessMixin(QiniuProcessBaseMixin):
 	@gen.coroutine
 	def get_imageexif(self,origin_url):
 		url=self.imageexif_url(origin_url)
-		response=yield self._send_async_request(url)
+		response=yield self.send_async_request(url)
 		return response							
 	def imageave_url(self,origin_url):
 		if origin_url.find("?")>=0:
@@ -317,11 +308,11 @@ class QiniuImageProcessMixin(QiniuProcessBaseMixin):
 	@gen.coroutine
 	def get_imageave(self,origin_url):
 		url=self.imageave_url(origin_url)
-		response=yield self._send_async_request(url)
+		response=yield self.send_async_request(url)
 		if response:
 			return json_decode(response).get("RGB")
 
-class QiniuAVProcessMixin(QiniuProcessBaseMixin):
+class QiniuAVProcessMixin:
 	def avinfo_url(self,av_url):
 		if av_url.find("?")>=0:
 			return av_url+"&avinfo"
@@ -330,7 +321,7 @@ class QiniuAVProcessMixin(QiniuProcessBaseMixin):
 	@gen.coroutine
 	def get_avinfo(self,av_url):
 		avinfo_url=self.avinfo_url(av_url)
-		response=yield self._send_async_request(avinfo_url)
+		response=yield self.send_async_request(avinfo_url)
 		if response:
 			return json_decode(response)
 		return None
@@ -384,21 +375,35 @@ class _PersistentWrapper(object):
 	def set_bucket(self,bucket):
 		self.__bucket=bucket
 	
-class QiniuResourcePersistentMixin(object):
+
+class QiniuResourceProcessor(QiniuResourceOperationBase,
+                           QiniuAVProcessMixin,
+			   QiniuImageProcessMixin,
+			   _QiniuResourceOpsInterface):
+	def __init__(self,bucket,auth):	
+		super(QiniuResourceProcessor,self).__init__(bucket,auth)
+	def qrcode_url(self,url,mode=0,level=1):
+		resulted_url=url
+		interface=self.qrcode_interface(mode,level)
+		if url.find("?")>=0:
+			resulted_url+='&'+interface
+		else:
+			resulted_url+='?'+interface
+		return resulted_url
+			
 	@gen.coroutine
 	def _send_persistent_request(self,url_path,host="api.qiniu.com",body=None,method=None):
 		url="http://"+host+url_path
 		headers={}
 		headers['Authorization']=self._authorization(url_path,body)
 		headers['Host']=host
-		response=yield self._send_async_request(url,headers=headers,method=method or "POST",body=body)
+		response=yield self.send_async_request(url,headers=headers,method=method or "POST",body=body)
 		return response	
 	def persistent(self,key,notify_url,fops=None,bucket=None,force=1,pipeline=None):
 		""" 
 			Usage:
 			
 				client=QiniuClient('access_key','secret_key',bucket='your bucket')
-				persistent=client.persistent('image/java.jpg',notify_url)
 				persistent.add_fops(client.text_watermark_interface("hello"))
 				yield persistent.execute()
 			
@@ -411,6 +416,3 @@ class QiniuResourcePersistentMixin(object):
 		response=yield self._send_persistent_request(url_path,method="GET")	
 		if response:
 			return json_decode(response)
-
-
-			
