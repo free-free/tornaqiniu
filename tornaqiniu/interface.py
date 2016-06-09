@@ -157,5 +157,16 @@ class QiniuInterface(object):
 	@classmethod
 	def prefop(cls,persistent_id):
 		interface="/status/get/prefop?id=%s"%str(persistent_id)
-		return interface	
-			 
+		return ("",interface)	
+	@classmethod
+	def imageinfo(self):	
+		return ("","imageInfo")
+	@classmethod
+	def imageexif(self):
+		return ("","exif")
+	@classmethod
+	def imageave(self):
+		return ("","imageAve")
+	@classmethod
+	def avinfo(self):
+		return ("","avinfo") 			 
