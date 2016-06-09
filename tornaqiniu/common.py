@@ -4,7 +4,7 @@ from .utils import *
 from tornado import gen
 from tornado import httpclient
 from tornado.httpclient import AsyncHTTPClient
-
+import copy
 class Auth(object):
 	def __init__(self,access_key,secret_key):
 		assert access_key!=None and access_key!="","invalid access_key"	
@@ -47,26 +47,73 @@ class Auth(object):
 		access_token=self.access_token(signing_str)
 		return "QBox "+access_token
 
-class QiniuResourceOperationBase(object):
-	def __init__(self,bucket,auth):
-		assert bucket!=None and bucket!="","invalid bucket"
-		self._bucket=bucket
-		self._auth=auth
-	@gen.coroutine
-	def send_async_request(self,url,headers=None,method="GET",body=None):
-		headers=headers or {}
-		if body or method.upper()=="POST":
-			headers["Content-Type"]="application/x-www-form-urlencoded"
-		req=httpclient.HTTPRequest(url,method=method,body=body,headers=headers,allow_nonstandard_methods=True)
-		http_request=AsyncHTTPClient()
-		response=""
-		try:
-			response=yield http_request.fetch(req)
-		except httpclient.HTTPError as e:
-			print("Error:"+str(e))
-		except Exception as e:
-			print("Error:"+str(e))
+class Policy(object):
+	_policy_map={
+		"scope":"scope",
+		"deadline":"deadline",
+		"insert_only":"insertOnly",
+		"end_user":"endUser",
+		"return_url":"returnUrl",
+		"return_body":"returnBody",
+		"callback_url":"callbackUrl",
+		"callback_host":"callbackHost",
+		"callback_body":"callbackBody",
+		"callback_body_type":"callbackBodyType",
+		"callback_fetch_key":"callbackFetchKey",
+		"persistent_ops":"persistentOps",
+		"persistent_notify_url":"persistentNotifyUrl",
+		"persistent_pipeline":"persistentPipeline",
+		"save_key":"saveKey",
+		"fsize_min":"fsizeMin",
+		"fsize_limit":"fsizeLimit",
+		"detect_mime":"detectMime",
+		"mime_limit":"mimeLimit",
+		"delete_after_days":"deleteAfterDays",
+	}	
+	_policys={}
+	def __init__(self,policys=None):
+		assert isinstance(policys,(dict,type(None)))
+		if isinstance(policys,dict):
+			for policy_n,policy_v in policys.items():
+				self._policys[policy_n]=policy_v
+	def del_policy(self,policy_name):
+		if policy_name in self._policys:
+			del self._policys[policy_name]
+	def __getattr__(self,policy_attr_name):
+		policy_name=self._policy_map.get(policy_attr_name)
+		if not policy_name:
+			return None
+		return self._policys.get(policy_name)
+	def __setattr__(self,policy_attr_name,policy_value):
+		policy_name=self._policy_map.get(policy_attr_name)
+		if not policy_name:
+			raise Exception("No such policy '%s'"%policy_attr_name)
+		# when policy_value equal to None,that's means delete policy
+		if policy_value==None:
+			self.del_policy(policy_name)
 		else:
-			return bytes_decode(response.body)
-		finally:
-			http_request.close()
+			#The persistentOps and callbackUrl  have multi values,so it need to process seperately
+			if policy_name in ("persistentOps","callbackUrl"):
+				if not self._policys.get(policy_name):
+					self._policys[policy_name]=policy_value
+				else:
+					self._policys[policy_name]+=';'+policy_value
+			else:
+				self._policys[policy_name]=policy_value
+	def __setitem__(self,policy_name,policy_value):
+		if policy_name not in self._policy_map.keys():
+			raise Exception("No such  policy '%s'"%policy_name)
+		self._policys[self._policy_map.get(policy_name)]=policy_value
+	def __getitem__(self,policy_name):
+		if policy_name in self._policy_map.keys():
+			return self._policys.get(self._policy_map[policy_name])
+	def __delitem__(self,policy_name):
+		if policy_name in self._policy_map.keys():
+			if self._policy_map[policy_name] in self._policys:
+				del self._policys[self._policy_map[policy_name]]
+	@property
+	def policys(self):
+		return self._policys
+	def delete_all_policys(self):
+		self._policys.clear()
+		
