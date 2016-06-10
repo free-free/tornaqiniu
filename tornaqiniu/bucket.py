@@ -1,23 +1,11 @@
 #-*- coding:utf-8 -*-
-from resource_load import QiniuResourceLoader
-from resource_manage import QiniuResourceManager
-from resource_process import QiniuResourceProcessor
-from resource import Resource
 import functools
-
-
-
-def rq_res(method):
-	@functools.wraps(method)
-	def wrapper(self,*args,**kwargs):
-		if not self._resource_instance:
-			raise Exception("'%s' has no such method '%s'"%(str(self),method.__name__))
-		return method(self,*args,**kwargs)	
-	return wrapper
-
-
+from tornado import gen
+from .common import Policy
+from .resource import Resource,QiniuResourceLoader,QiniuResourceManager,QiniuResourceProcessor
+from .interface import QiniuInterface
 class Bucket(object):
-	def __init__(self,auth,bucket_name,bucket_acp=0):
+	def __init__(self,host,auth,bucket_name,bucket_acp=0):
 		r"""
 		Args:
 			auth:qiniu authentication object
@@ -26,90 +14,35 @@ class Bucket(object):
 				0--->public bucket
 				1--->private bucket
 		"""
+		self.__host=host
 		self.__auth=auth
 		self.__bucket_name=bucket_name
 		self.__bucket_acp=bucket_acp
-		self.__res_loader=QiniuResourceLoader(self.__auth,self.__bucket_name)
-		self.__res_manager=QiniuResourceManager(self.__auth,self.__bucket_name)
-		self.__res_processor=QiniuResourceProcessor(self.__atuh,self.__bucket_name)
-		self._res_instance=None
+		self.__res_loader=QiniuResourceLoader(self.__auth)
+		self.__res_manager=QiniuResourceManager(self.__auth)
+		self.__res_processor=QiniuResourceProcessor(self.__auth)
+		self.__policy=Policy()
 	@property
 	def acp(self):
 		return self.__bucket_acp
-	def resource(self,res_key):
-		self._res_instance=Resource(res_key,self)
-		return self._res_instance
-	def upload_token(self,bucket=None,key=None,expires=3600,policys=None):
-		bucket=bucket or self._bucket
-		assert bucket!=None and bucket!="","invalid bucket"
-		if isinstance(policys,dict):
-			self.add_policys(policys)
-		return self._auth.upload_token(bucket,key,expires,self._resource_loader.policys)
-	def add_policy(self,field,value):
-		""" add one policy
-		Args:
-			field:policy name,
-			value:policy value,
-		Returns:
-			None
-		"""
-		self._resource_loader.add_policy(field,value)
-	def add_policys(self,policy_pairs):
-		""" add multi policys
-		Args:
-			policy_pairs:dict type
-		Returns:
-			None
-		"""
-		self._resource_loader.add_policys(policy_pairs)
-	def delete_policy(self,field):
-		""" delete one policy
-		Args:
-			field:policy name
-		Returns:
-			None
-		"""
-		self._resource_loader.delete_policy(field)
-	def delete_policys(self,fields):
-		"""delete multi policys
-		Args:
-			fields:a tuple or list of policy name 
-		Returns:
-			None
-		"""
-		self._resource_loader.delete_policys(fields)
-	def delete_all_policys(self):
-		"""delete all policys
-		"""
-		self._resource_loader.delete_all_policys()
-	def modify_policy(self,field,value):
-		"""modify one policy,if policy not exists ,add it
-		Args:
-			field:policy name
-			value:policy value
-		Returns:
-			None
-		"""
-		self._resource_loader.modify_policy(field,value)
-	def update_policys(self,policy_pairs():
-		"""update all policys
-		Args:
-			policy_pairs:dict type
-		Returns:
-			None
-		"""
-		self._resource_loader.get_flush_policys()
-		self._add_policys(policy_pairs()
 	@property
-	def policys(self):
-		"""get all policys
-		Args:
-			None
-		Returns:
-			all policys
-		"""
-		return self._resource_loader.get_policys()
-	@rq_res 
+	def bucket_name(self):
+		return self.__bucket_name
+	@property
+	def resources(self):
+		return self.__resources
+	def res(self,*res_key):
+		return Resource(self,*res_key)
+	def upload_token(self,key=None,bucket=None,expires=3600,policys=None):
+		bucket=bucket or self.__bucket_name
+		assert bucket!=None and bucket!="","invalid bucket"
+		if isinstance(policys,Policy):
+			all_policys=policys.policys()
+		elif isinstance(policys,dict):
+			all_policys=policys
+		else:
+			all_policys=self.__policy.policys()
+		return self.__auth.upload_token(bucket,key,expires,all_policys)
 	def private_url(self,key,expires=3600,host=None):
 		"""create private resource url
 		Args:
@@ -119,17 +52,15 @@ class Bucket(object):
 		Returns:
 			resource private url
 		"""
-		return self._resource_loader.private_url(key,expires,host or self._download_host)
-	@rq_res
-	def public_url(self,key):
+		return self.__res_loader.private_url(key,expires,host or self.__host)
+	def public_url(self,key,host=None):
 		"""
 		Args:
 			key:resource key name
 		Returns:
 			resource public url
 		"""
-		return self._resource_loader.public_url(key)
-	@rq_res
+		return self.__res_loader.public_url(key,host or self.__host)
 	@gen.coroutine
 	def stat(self,key,bucket=None):
 		"""get resource detail information
@@ -139,11 +70,10 @@ class Bucket(object):
 		Returns:
 			a dict for resource information
 		"""
-		response=yield self._resource_manager.stat(key,bucket or self._bucket)
+		response=yield self.__res_manager.stat(key,bucket or self._bucket)
 		return response
-	@rq_res
 	@gen.coroutine
-	def move(self,s_bucket,s_key,d_bucket,d_key):
+	def move(self,s_key,s_bucket,d_key,d_bucket):
 		""" move resource to another bucket,it's a tornado coroutine
 		Args:
 			s_bucket:src bucket name
@@ -153,20 +83,18 @@ class Bucket(object):
 		Returns:
 		
 		"""
-		response=yield self._resource_manager.move(s_bucket,s_key,d_bucket,d_key)
+		response=yield self.__res_manager.move(s_key,s_bucket,d_key,d_bucket)
 		return response
-	@rq_res
 	@gen.coroutine
-	def copy(self,s_bucket,s_key,d_bucket,d_key):
+	def copy(self,s_key,s_bucket,d_key,d_bucket):
 		""" copy resource to another bucket,it's a tornaod coroutine
 		Args:
 			almost same with 'move(**)'
 		Returns:
 			None
 		"""
-		response=yield self._resource_manager.copy(s_bucket,s_key,d_bucket,d_key)
+		response=yield self.__res_manager.copy(s_key,s_bucket,d_key,d_bucket)
 		return response
-	@rq_res
 	@gen.coroutine
 	def delete(self,key,bucket=None):
 		"""delete a resource
@@ -176,9 +104,8 @@ class Bucket(object):
 		Returns
 			None
 		"""
-		response=yield self._resource_manager.delete(key,bucket or self._bucket)
+		response=yield self.__res_manager.delete(key,bucket or self.__bucket_name)
 		return response
-	@rq_res
 	@gen.coroutine
 	def list(self,bucket=None,limit=1000,prefix="",delimiter="",marker=""):
 		"""list  resource detail information that meet requirements
@@ -187,11 +114,10 @@ class Bucket(object):
 		Returns:
 			a list of resource information
 		"""
-		response=yield self._resource_manager.list(bucket or self._bucket,limit,prefix,delimiter,marker)
+		response=yield self.__res_manager.list(bucket or self._bucket,limit,prefix,delimiter,marker)
 		return response
-	@rq_res
 	@gen.coroutine
-	def fecth_store(self,fetch_url,key=None,bucket=None):
+	def fetch_store(self,fetch_url,key=None,bucket=None):
 		"""fecth resource of 'fecth_url' ,then save it to 'bucket'
 		Args:
 			fetch_url:fetch url
@@ -200,22 +126,27 @@ class Bucket(object):
 		Returns:
 			None
 		"""
-		response=yield self._resource_manager.fetch_store(fetch_url,key,bucket or  self._bucket)
+		response=yield self.__res_manager.fetch_store(fetch_url,key,bucket or  self._bucket)
 		return response
-	@rq_res
 	@gen.coroutine
-	def bacth(self,*opers):
+	def batch(self,*opers):
 		""" execute multi resource management operations
 		Args:
 			*opers:opertions
 		Returns:
 			None
 		"""
-		response=yield self._resource_manager.bacth(*opers)
+		response=yield self.__res_manager.batch(*opers)
 		return response
-	@rq_res
 	@gen.coroutine
-	def prefecth(self,key,bucket=None):
-		response=yield self._resource_manager.prefetch(key,bucket or self._bucket)
+	def prefetch(self,key,bucket=None):
+		response=yield self.__res_manager.prefetch(key,bucket or self._bucket)
 		return response
+	@gen.coroutine
+	def prefop(self,persistent_id):
+		response=yield self.__res_processor.prefop(presistent_id)
+		return response	
+	def persistent(self,key,notify_url,fops=None,force=1,pipeline=None):
+		return self.__res_processor.persistent(key,notify_url,self.__bucket_name,fops,force,pipeline)
+		
 	
