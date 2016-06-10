@@ -4,12 +4,13 @@ import hmac
 import hashlib
 import base64
 from datetime import datetime
+import uuid
 from .errors import *
 from .utils import *
 from . import PUT_POLICY
-from .common import Auth,QiniuResourceOperationBase
-
-
+from .common import Auth
+from .interface import QiniuInterface
+import os
 ##################################################################
 #
 # Qiniu Resource Loader that's responsible for uploading resource to
@@ -18,42 +19,9 @@ from .common import Auth,QiniuResourceOperationBase
 #
 #################################################################
 
-class QiniuResourceLoader(QiniuResourceOperationBase):
-	def __init__(self,bucket,auth):
-		super(QiniuResourceLoader,self).__init__(bucket,auth)
-		self._policys={}
-	def _check_policy(self,field,value):
-		if policy_field not in PUT_POLICY.keys():
-				raise PolicyKeyError("Not support '%s' policy"%policy_field)		
-		if not isinstance(policy_value,PUT_POLICY[policy_field]['type']):
-				raise PolicyValueTypeError("Policy '%s' value type error"%policy_field)
-	def add_policy(self,policy_field,policy_value):
-		self._check_policy(policy_field,policy_value)
-		self._policys[policy_field]=policy_value
-	def add_policys(self,policy_pairs):
-		for key,value in policy_pairs.items():
-			self._check_policy(key,value)
-			self._policys[key]=value
-	def delete_policy(self,field):
-		if field in self._policys:
-			del self._policys[field]
-	def delete_policys(self,fields):
-		for field in fields:
-			self.delete_policy(field)
-	def delete_all_policys(self):
-		del self._policys
-		self._policys={}
-	def modify_policy(self,field,value):
-		self._policys[field]=value
-	@property
-	def policys(self):
-		return self._policys
-	def get_policys(self):
-		return self._policys
-	def get_flush_policys(self):
-		policys=self._policys
-		self._policys={}
-		return policys
+class QiniuResourceLoader(object):
+	def __init__(self,auth):
+		self._auth=auth
 	def _gen_private_url(self,key,host,expires=3600):
 		assert host!=None and host!="","download host can' be empty"
 		if not host.startswith("http://"):
@@ -129,15 +97,6 @@ class QiniuResourceLoader(QiniuResourceOperationBase):
 		return download_urls	
 	
 	
-class _Batch(object):
-	def __init__(self,client):
-		self.__client=client
-		self.__operations=[]
-	@gen.coroutine
-	def execute(self):
-		pass
-	def __setattr__(self,attr,value):
-		pass
 ################################################################################
 #
 #
@@ -147,84 +106,64 @@ class _Batch(object):
 #
 #
 ##############################################################################
-class QiniuResourceManager(QiniuResourceOperationBase):
-	def __init__(self,bucket,auth):
-		super(QiniuResourceManager,self).__init__(bucket,auth)
+class QiniuResourceManager(object):
+	def __init__(self,auth):
+		self._auth=auth
 	@gen.coroutine
-	def _send_manage_request(self,url_path,host="rs.qiniu.com",body=None,method=None):
+	def _send_manage_request(self,url_path,host="rs.qiniu.com",body=None,method="POST"):
 		full_host="http://"+host
 		url=full_host+url_path
 		headers={
 			"Authorization":self._auth.callback_verify_header(url_path,body),
 			"Host":host
 		}
-		response=yield self.send_async_request(url,headers=headers,method=method or "GET",body=body)
+		response=yield send_async_request(url,headers=headers,method=method ,body=body)
+		if response:
+			return bytes_decode(response.body)
+	@gen.coroutine
+	def stat(self,key,bucket):
+		host,interface=QiniuInterface.stat(key,bucket)
+		response= yield self._send_manage_request(interface,host=host)
 		return response
 	@gen.coroutine
-	def stat(self,key,bucket=None):
-		bucket=bucket or self._bucket
-		entry=bucket+":"+key
-		encoded_entry=bytes_decode(urlsafe_base64_encode(entry))
-		response= yield self._send_manage_request("/stat/"+encoded_entry)
-		return response
-	@gen.coroutine
-	def move(self,src_bucket,src_key,dest_bucket,dest_key):
-		src_entry=bytes_decode(urlsafe_base64_encode(src_bucket+':'+src_key))
-		dest_entry=bytes_decode(urlsafe_base64_encode(dest_bucket+':'+dest_key))
-		response=yield self._send_manage_request("/move/"+src_entry+'/'+dest_entry,method="POST")
+	def move(self,src_key,src_bucket,dest_key,dest_bucket):
+		host,interface=QiniuInterface.move(src_key,src_bucket,dest_key,dest_bucket)
+		response=yield self._send_manage_request(interface,host=host,method="POST")
 		return response
 	@gen.coroutine
 	def modify_mime(self,bucket,key,mine_type):
 		pass
 
 	@gen.coroutine
-	def copy(self,src_bucket,src_key,dest_bucket,dest_key):
-		src_encoded_entry=bytes_decode(urlsafe_base64_encode(src_bucket+":"+src_key))
-		dest_encoded_entry=bytes_decode(urlsafe_base64_encode(dest_bucket+":"+dest_key))
-		response=yield self._send_manage_request("/copy/"+src_encoded_entry+"/"+dest_encoded_entry,method="POST")
+	def copy(self,src_key,src_bucket,dest_key,dest_bucket):
+		host,interface=QiniuInterface.copy(src_key,src_bucket,dest_key,dest_bucket)
+		response=yield self._send_manage_request(interface,host=host,method="POST")
 		return response
 	@gen.coroutine
-	def delete(self,key,bucket=None):
-		bucket=bucket or self._bucket
-		encoded_entry=bytes_decode(urlsafe_base64_encode(bucket+":"+key))
-		response =yield self._send_manage_request("/delete/"+encoded_entry,method="POST")
+	def delete(self,key,bucket):
+		host,interface=QiniuInterface.delete(key,bucket)
+		response =yield self._send_manage_request(interface,host=host,method="POST")
 		return response
 	@gen.coroutine
-	def list(self,bucket=None,limit=1000,prefix="",delimiter="",marker=""):
-		bucket=bucket or self._bucket
-		assert limit>1 and limit<=1000,"limit must bettween 1 to 1000"
-		query_string=urlencode({
-			'bucket':bucket,
-			'limit':limit,
-			'marker':marker,
-			'prefix':prefix,
-			'delimiter':delimiter,
-		})	
-		response=yield self._send_manage_request('/list?'+query_string,host="rsf.qbox.me",method="POST")
+	def list(self,bucket,limit=1000,prefix="",delimiter="",marker=""):
+		host,interface=QiniuInterface.list(bucket,limit,prefix,delimiter,marker)
+		response=yield self._send_manage_request(interface,host="rsf.qbox.me",method="POST")
 		return response
 	@gen.coroutine
-	def fetch_store(self,fecth_url,key=None,bucket=None):
-		bucket=bucket or self._bucket
-		if key:
-			encoded_entry=bytes_decode(urlsafe_base64_encode(bucket+":"+key))
-		else:
-			encode_entry=bytes_decode(urlsafe_base64_encode(bucket))
-		encoded_fecth_url=bytes_decode(urlsafe_base64_encode(fetch_url))
-		response=yield self._send_manage_request('/fetch/'+encoded_fetch_url+'/to/'+encoded_entry,host='iovip.qbox.me',method="POST")
+	def fetch_store(self,fetch_url,bucket,key=None):
+		host,interface=QiniuInterface.fetch_store(fetch_url,key,bucket)
+		response=yield self._send_manage_request(interface,host=host,method="POST")
 		return response
 	@gen.coroutine
 	def batch(self,*opers):
-		opertions={}
-		for oper in opers:
-			opertions['op']=oper
-		opertions_body=urlencode(opertions)
-		response=yield self._send_manage_request('/batch',method="POST",body=opertions_body)
+		opers=list(map(lambda op:'op='+op,opers))
+		opers_str="&".join(opers)
+		response=yield self._send_manage_request('/batch',method="POST",body=opers_str)
 		return response
 	@gen.coroutine
-	def prefecth(self,key,bucket=None):
-		bucket=bucket or self._bucket
-		encoded_entry=bytes_decode(urlsafe_base64_encode(bucket+':'+key))
-		response=yield self._send_manage_request('/prefecth/'+encoded_entry,method="POST",host="iovip.qbox.me")
+	def prefetch(self,key,bucket):
+		host,interface=QiniuInterface.prefetch(key,bucket)
+		response=yield self._send_manage_request(interface,method="POST",host=host)
 		return response
 	
 		
@@ -235,239 +174,32 @@ class QiniuResourceManager(QiniuResourceOperationBase):
 #like 'imageView2','QRCode','Audio/Vedio thumb'
 #		
 #################################################################################
-class _QiniuResourceOpsInterface(object):
-	"""
-		this class defines all qiniu resource prosession interface 
-	"""
-	_gravity_map={1:"NorthWest",2:"North",3:"NorthEast",
-		     4:"West",5:"Center",6:"East",
-		     7:"SouthWest",8:"South",9:"SouthEast"}
-	def image_watermark_interface(self,
-			   water_image_url,
-			   dissolve=100,
-			   gravity=9,
-			   dx=10,
-			   dy=10,
-			   ws=0):
-		r"""
-			The detail definition of parameters,please refer to qiniu documents
-		"""
-		assert isinstance(dissolve,int) and dissolve>=1 and dissolve<=100
-		assert isinstance(gravity,int) 
-		assert isinstance(dx,int) and isinstance(dy,int)
-		assert float(ws)>=0.0 and float(ws)<=1.0
-		interface="watermark/1"
-		interface+='/image/'+str(bytes_decode(urlsafe_base64_encode(water_image_url)))
-		interface+='/dissolve/'+str(dissolve)
-		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
-		interface+='/dx/'+str(dx)
-		interface+='/dy/'+str(dy)
-		interface+='/ws/'+str(ws)
-		return interface
 	
-	def text_watermark_interface(self,
-				text,
-				font="宋体",
-				font_size=500,
-				fill="#ffffff",
-				dissolve=100,
-				gravity=9,
-				dx=10,
-				dy=10):
-		r"""
-			The detail  definition of parameters,please refer to qiniu documents
-		"""
-		assert isinstance(font,str)
-		assert isinstance(font_size,int)
-		assert isinstance(fill,str)
-		assert isinstance(dissolve,int) and dissolve>=1 and dissolve<=100
-		assert isinstance(gravity,int)
-		assert isinstance(dx,int) and isinstance(dy,int)
-		interface="watermark/2"
-		interface+='/text/'+str(bytes_decode(urlsafe_base64_encode(text)))
-		interface+='/font/'+str(bytes_decode(urlsafe_base64_encode(font)))
-		interface+='/fontsize/'+str(font_size)
-		interface+='/fill/'+str(bytes_decode(urlsafe_base64_encode(fill)))
-		interface+='/dissolve/'+str(dissolve)
-		interface+='/gravity/'+str(self._gravity_map.get(gravity,"SouthEast"))
-		interface+='/dx/'+str(dx)
-		interface+='/dy/'+str(dy)
-		return interface
-
-	def image_view2_interface(self,mode,width=None,height=None,frmt=None,interlace=0,quality=75,ignore_error=0):
-		r"""
-			qiniu imageView2 procession
-			
-			@parameters:
-				'url':image url,
-				'mode':image procession mode,the specific definition as follows:
-					1.mode 0:
-						image's long edge max is 'width',image's short edge max is 'height' and 
-						don't perform cut opertion.If just specific 'witdh' or 'height' ,
-						then another edge will be self-adjust.
-					2.mode 1:
-						images' min width is 'width' and min heigth is 'height'.
-						performing middle cut opertion.If just specific 'width' or 'height',
-						then width will be equal to height
-					3.mode 2:
-						this mode almost be same with mode 0,the only difference is mode 2 
-						limit images' width and height.mode 0 is suitable for mobile ,
-						mode 2 is suitable for PC
-					4.mode 3:
-						image's  min width is 'width' and min height is 'height',
-						don't perform cut opertions.If just specific 'width' or 'height',
-						then widht will be equal to height
-					5.mode 4:
-						..............
-					6.mode 5:	
-						.............
-				'width':image processed width,
-				'height':image processed height,
-				'frmat':image format,supporting .jpg,.gif,.png,.webp,
-				'interlace':image interlace show,the default values is true
-				'quality':image processed quality,range from 0 to 100,the default value is 75,
-				'ignore-error':whether to ignore error,when image procession failed!.the default value is true
-		"""
-		assert mode<6 and mode>=0,"'mode' must range from 0 to 5"
-		assert width or height,"both 'width' and 'height' can't be none "
-		assert quality<=100 and quality>=0,"'quality' must range from 0 to 100"
-		interface="imageView2/"+str(mode)
-		if width:
-			interface='/w/'+str(width)
-		if height:
-			interface='/h/'+str(width)
-		if frmt:
-			interface='/format/'+str(frmt)
-		if interlace!=0:
-			interface='/interlace/'+str(interlace)
-		if quality!=75:
-			interface='/quality/'+str(quality)
-		if ignore_error!=0:
-			interface+='/ignore-error/'+str(ignore_error)
-		return interface
-
-	def qrcode_interface(self,mode,level):
-		_level_map={1:"L",2:"M",3:"Q",4:"H"}
-		r"""
-			generate QR code for resource 
-			
-			@parameter:
-				1.download_url:resource download url,
-				2.mode: 0 or 1,
-				3.level: QR code image size,the value
-				range from 1 to 4
-		"""
-		assert int(mode)==0 or int(mode)==1,"'mode' must be 0 or 1"
-		assert int(level) in [1,2,3,4],"'level' must range from 1 to 4"
-		interface="qrcode/"+str(mode)+'/level/'+str(_level_map.get(level))
-		return interface
-	def avthumb_transcoding_interface(self,frmt,**options):
-		"""
-			The  'options' parameter  detail definition refers to :
-				 http://developer.qiniu.com/code/v6/api/dora-api/av/avthumb.html
-		"""
-		interface="avthumb/%s"%str(frmt)
-		if len(options)>0:
-			interface+=self._options_dict_to_str(options)
-		return interface
-	def _options_dict_to_str(self,options):
-		options_list=list(options.items())
-		options_list=list(map(lambda item:"/"+str(item[0])+"/"+str(item[1]),options_list))
-		options_str=reduce(lambda op1,op2:op1+op2,options_list)
-		return options_str
-	def avthumb_slice_interface(self,no_domain,**options):
-		"""
-			'options' detail definition refer to:
-				http://developer.qiniu.com/code/v6/api/dora-api/av/segtime.html
-		"""
-		if int(no_domain)>0:
-			no_domain=1
-		else:
-			no_domain=0
-		interface="avthumb/m3u8/noDomain/%s"%str(no_domain)
-		if len(options)>0:
-			interface+=self._options_dict_to_str(options)
-		return interface
-	def avconcat_interface(self,mode,frmt,*encoded_urls):
-		"""
-			detail refer to:
-				http://developer.qiniu.com/code/v6/api/dora-api/av/avconcat.html
-		"""
-		interface="avconcat/"+str(mode)+'/format/'+str(frmt)
-		for encoded_url in encoded_urls:
-			interface+='/'+encoded_url
-		return interface
-	def vframe_interface(self,out_img_frmt,offset,width=None,heigth=None,rotate=None):
-		"""
-			detail definition refer to:
-				http://developer.qiniu.com/code/v6/api/dora-api/av/vframe.html
-		"""
-		interface='vframe/'+str(out_img_frmt)+'/offset/'+str(offset)
-		if width:
-			assert width>=1 and width<=3840
-			interface+='/w/'+str(width)
-		if heigth:
-			assert heigth>=1 and height<=2160
-			interface+='/h/'+str(height)
-		if rotate:
-			assert rotate in [90,180,270,'auto']
-			interface+='/rotate/'+str(rotate)
-		return interface
-	def vsample_interface(self,out_img_frmt,
-			     start_second,
-			     sample_time,
-			     resolution_width=None,
-		             resolution_height=None,
-			     rotate=None,
-			     sample_interval=None,
-			     pattern=None):
-		"""
-			detail definition refer to:
-				http://developer.qiniu.com/code/v6/api/dora-api/av/vsample.html
-		"""
-		interface="vsample/"+str(out_img_frmt)+'/ss/'+str(start_second)
-		interface+='/t/'+str(sample_time)
-		if resolution_width and resolution_height:
-			assert resolution_width>=1 and resolution_width<=1920
-			assert resolution_height>=1 and resolution_height<=1080
-			interface+='/s/'+str(resolution_width)+'x'+str(resolution_height)
-		if rotate:
-			assert rotate in (90,180,270,'auto')
-			interface+='/rotate/'+str(rotate)
-		if sample_interval:
-			interface+='/interval/'+str(sample_intervale)
-		if pattern:
-			interface+=bytes_decode(urlsafe_base64_encode(pattern))
-		return 	interface
-	
-
-	
-
 class QiniuImageProcessMixin:
-	def image_view2(self,url,mode,width=None,height=None,frmt=None,interlace=0,quality=75,ignore_error=0):
-		interface=self.image_view2_interface(mode,width,height,frmt,interlace,quality,ignore_error)
+	def image_view2(self,url,mode,width=None,height=None,**kwargs):
+		host,interface=QiniuInterface.image_view2(mode,width,height,**kwargs)
 		resulted_url=url
 		if url.find("?")>=0:
 			resulted_url+="&"+interface
 		else:
 			resulted_url+="?"+interface
 		return resulted_url
-	def image_watermark(self,origin_url,water_image_url,dissolve=100,gravity=9,dx=10,dy=10,ws=0):
-		watermark_interface=self.image_watermark_interface(water_image_url,dissolve,gravity,dx,dy,ws)
+	def image_watermark(self,origin_url,water_image_url,**kwargs):
+		host,interface=QiniuInterface.image_watermark(water_image_url,**kwargs)
 		resulted_url=origin_url
 		if origin_url.find("?")>=0:
-			resulted_url+='&'+watermark_interface
+			resulted_url+='&'+interface
 		else:
-			resulted_url+='?'+watermark_interface
+			resulted_url+='?'+interface
 		return resulted_url	
 
-	def text_watermark(self,origin_url,text,font="宋体",font_size=500,fill="#000",dissolve=100,gravity=9,dx=10,dy=10):
-		watermark_interface=self.text_watermark_interface(text,font,font_size,fill,dissolve,gravity,dx,dy)
+	def text_watermark(self,origin_url,text,**kwargs):
+		host,interface=self.text_watermark_interface(text,**kwargs)
 		resulted_url=origin_url
 		if origin_url.find("?")>=0:
-			resulted_url+='&'+watermark_interface
+			resulted_url+='&'+interface
 		else:
-			resulted_url+="?"+watermark_interface
+			resulted_url+="?"+interface
 		return resulted_url
 	def multi_watermark(self,origin_url,*args):
 		"""
@@ -573,7 +305,7 @@ class _PersistentWrapper(object):
 	def execute(self):
 		assert self.__bucket,"bucket can't be none"
 		assert len(self.__fops)>0,"fops can't be none"
-		self.__fops=reduce(lambda op1,op2:str(op1)+';'+str(op2),self.__fops)		
+		all_fops=";".join(self.__fops)
 		body=urlencode({
 			'bucket':self.__bucket,
 			'key':self.__key,
@@ -605,30 +337,41 @@ class _PersistentWrapper(object):
 		self.__bucket=bucket
 	
 
-class QiniuResourceProcessor(QiniuResourceOperationBase,
-                           QiniuAVProcessMixin,
-			   QiniuImageProcessMixin,
-			   _QiniuResourceOpsInterface):
-	def __init__(self,bucket,auth):	
-		super(QiniuResourceProcessor,self).__init__(bucket,auth)
+class QiniuResourceProcessor(QiniuAVProcessMixin,
+			   QiniuImageProcessMixin):
+	def __init__(self,auth):	
+		self._auth=auth
 	def qrcode_url(self,url,mode=0,level=1):
 		resulted_url=url
-		interface=self.qrcode_interface(mode,level)
+		interface=QiniuInterface.qrcode(mode,level)
 		if url.find("?")>=0:
 			resulted_url+='&'+interface
 		else:
 			resulted_url+='?'+interface
 		return resulted_url
-			
+	@gen.coroutine
+	def get_qrcode(self,url,file_name=None,mode=0,level=1):
+		url=self.qrcode_url(url,mode,level)
+		response=yield send_async_request(url)
+		response_type=response.headers.get("Content-Type").rsplit('/',1)[1]
+		if response:
+			if not file_name:
+				uid=uuid.uuid4().hex
+				file_name=uuid+"."+response_type
+			mkdir_recursive(os.path.dirname(file_name))
+			with open(file_name,"w+b") as f:
+				f.write(response.buffer.read())
+			return file_name
+		return None
 	@gen.coroutine
 	def _send_persistent_request(self,url_path,host="api.qiniu.com",body=None,method=None):
 		url="http://"+host+url_path
 		headers={}
-		headers['Authorization']=self._authorization(url_path,body)
+		headers['Authorization']=self._auth.authorization(url_path,body)
 		headers['Host']=host
-		response=yield self.send_async_request(url,headers=headers,method=method or "POST",body=body)
-		return response	
-	def persistent(self,key,notify_url,fops=None,bucket=None,force=1,pipeline=None):
+		response=yield send_async_request(url,headers=headers,method=method or "POST",body=body)
+		return bytes_decode(response.body)
+	def persistent(self,key,notify_url,bucket=None,fops=None,force=1,pipeline=None):
 		""" 
 			Usage:
 			
@@ -641,11 +384,137 @@ class QiniuResourceProcessor(QiniuResourceOperationBase,
 		return _PersistentWrapper(self,key,fops,notify_url,bucket,force,pipeline)
 	@gen.coroutine
 	def prefop(self,persistent_id):
-		url_path="/status/get/prefop?id=%s"%str(persistent_id)
-		response=yield self._send_persistent_request(url_path,method="GET")	
+		interface=QiniuInterface.prefop(persistent_id)
+		response=yield self._send_persistent_request(interface,method="GET")	
 		if response:
 			return json_decode(response)
-		
+	
+
+
+class Fops(object):
+	def __init__(self,res,fops=None):
+		self.__res=res
+		self.__fops=[]
+		if isinstance(fops,(list,tuple)):
+			self.__fops.extend(list(fops))
+	def image_watermark(self,water_image_url,**kwargs):
+		fops=QiniuInterface(water_image_url,**kwargs)[1]
+		self.__fops.append(fops)
+		return self
+	def text_watermark(self,text,**kwargs):
+		fops=QiniuInterface(text,**kwargs)[1]
+		self.__fops.append(fops)
+		return self
+	def image_view2(self,mode,width=None,height=None,**kwargs):
+		fops=QiniuInterface(mode,width,height,**kwargs)[1]
+		self.__fops.append(fops)
+		return self
+	def qrcode(self,mode=0,level=1):
+		fops=QiniuInterface.qrcode(mode,level)[1]
+		self.__fops.append(fops)
+		return self
+	def avthumb_transcoding(self,frmt,**kwargs):
+		fops=QiniuInterface.avthumb_transcoding(frmt,**kwargs)[1]
+		self.__fops.append(fops)
+		return self
+	def avthumb_slice(self,no_domain,**kwargs):
+		fops=QiniuInterface.avthumb_slice(no_domain,**kwargs)[1]
+		self.__fops.append(fops)
+		return self
+	def avconcat(self,mode,frmt,*urls):
+		fops=QiniuInterface.avconcat(mode,frmt,*urls)[1]
+		self.__fops.append(fops)
+		return self
+	def vframe(self,out_img_frmt,offset,**kwargs):
+		fops=QiniuInterface.vframe(out_img_url,offset,**kwargs)[1]
+		self.__fops.append(fops)
+		return self
+	def vsample(self,out_img_frmt,start_time,sample_time,**kwargs):
+		fops=QiniuInterface.vsample(out_img_frmt,start_time,sample_time,**kwargs)[1]
+		self.__fops.append(fops)
+		return self
+	def __getattr__(self,attr):
+		if hasattr(self,attr):
+			return getattr(self,attr)
+		else:
+			raise Exception("No such attribute '%s'"%attr)
+	@property
+	def fops(self):
+		return self.__fops
+class Batch(object):
+	def __init__(self,res,cmd=None):
+		self.__res=res
+		self.__batch_cmd=set()
+		if isinstance(cmd,(tuple,list)):
+			self.__batch_cmd.update(list(cmd))
+	def stat(self,key=None):
+		if len(self.__res.key)==0 and not key:
+			raise Exception("resource key can't be empty")
+		key=key or self.__res.key[0]
+		self.__batch_cmd.add(QiniuInterface.stat(key,self.__res.bucket.bucket_name)[1])
+		return self
+	def multi_stat(self,keys=None):
+		keys=keys or self.__res.key
+		for key in keys:
+			self.stat(key)
+		return self
+	def move(self,d_key,d_bucket=None,s_key=None,s_bucket=None):
+		s_bucket=s_bucket or self.__res.bucket.bucket_name
+		d_bucket=d_bucket or self.__res.bucket.bucket_name
+		if len(self.__res.key)==0 and not s_key:
+			raise Exception("resource key can't be empty")
+		s_key=s_key or 	self.__res.key[0]
+		self.__batch_cmd.add(QiniuInterface.move(s_key,s_bucket,d_key,d_bucket)[1])
+		return self
+	def multi_move(self,d_keys,d_bucket=None,s_keys=None,s_bucket=None):
+		s_keys=s_keys or self.__res.key()
+		if len(s_keys)!=len(d_keys):
+			raise Exception("'d_keys' must equal to 's_keys'")
+		for ds_key in zip(d_keys,s_keys):
+			self.move(ds_key[0],d_bucket,ds_key[1],s_bucket)
+		return self
+	def copy(self,d_key,d_bucket=None,s_key=None,s_bucket=None):
+		s_bucket=s_bucket or self.__res.bucket.bucket_name
+		d_bucket=d_bucket or self.__res.bucket.bucket_name
+		if len(self.__res.key)==0 and not s_key:
+			raise Exception("resource key can't be empty")
+		s_key=s_key or self.__res.key[0]
+		self.__batch_cmd.add(QiniuInterface.copy(s_key,s_bucket,d_key,d_bucket)[1])
+		return self
+	def multi_copy(self,d_keys,d_bucket=None,s_keys=None,s_bucket=None):
+		s_keys=s_keys or self.__res.key()
+		if len(s_keys)!=len(d_keys):
+			raise Exception("'d_keys' must equal to 's_keys'")
+		for ds_key in zip(d_keys,d_keys):
+			self.copy(ds_key[0],d_bucket,ds_key[1],s_bucket)
+		return self
+	def delete(self,key=None):
+		if len(self.__res.key)==0 and not key:
+			raise Exception("resource key can't be empty")
+		key=key or self.__res.key[0]
+		self.__batch_cmd.add(QiniuInterface.delete(key,self.__res.bucket.bucket_name)[1])
+		return self
+	def multi_delete(self,keys=None):
+		keys=keys or self.__res.key
+		for key in keys:
+			self.delete(key)
+		return self
+	def list(self,limit=1000,prefix="",delimiter="",marker=""):
+		cmd=QiniuInterface.list(self.__res.bucket.bucket_name,limit,prefix,delimiter,marker)[1]
+		self.__batch_cmd.append(cmd)
+		return self
+	@gen.coroutine
+	def execute(self):
+		response=yield self.__res.bucket.batch(*self.__batch_cmd)
+		return response
+	def __getattr__(self,attr):
+		if hasattr(self.__res,attr):
+			return getattr(self.__res,attr)
+		else:
+			raise Exception("No such attribute '%s'"%attr)
+	@property
+	def cmds(self):
+		return self.__batch_cmd
 ################################################################################
 #
 #
@@ -654,17 +523,190 @@ class QiniuResourceProcessor(QiniuResourceOperationBase,
 #
 #
 ###############################################################################
+
 class Resource(object):
 	r"""
 		A map class  to qiniu bucket resource
 	"""
-	def __init__(self,key,bucket):
+	def __init__(self,bucket,*key):
 		r"""
 		Args:
 			key:resource key name,
 			bucket:bucket object,
 		"""
-		self.__key=key
+		self.__key=list(key)
 		self.__bucket=bucket
-	def url(self,*args,**kwargs):
+		self._vpipe={"query_string":[],"url_path":[],"base_url":None,"fops":[]}
+	@property
+	def bucket(self):
+		return self.__bucket
+	@property
+	def key(self):
+		return self.__key
+	def __reset_vpipe(self):
+		self._vpipe["query_string"]=[]
+		self._vpipe["url_path"]=[]
+		self._vpipe["base_url"]=None
+		self._vpipe["fops"]=[]
+	def url(self,expires=3600):
+		path=""
+		query_string=""
+		if len(self._vpipe.get("url_path"))>0:
+				path=''.join(self._vpipe.get("url_path"))
+		#check last called method whether output a query_string
+		if len(self._vpipe.get("query_string"))>0:
+				query_string='&'.join(self._vpipe.get("query_string"))
+		#check last called method whether output a fops
+		if len(self._vpipe.get("fops"))>0:
+				query_string=+"&"+"|".join(self._vpipe.get("fops"))
+		urls=[]
+		if not self._vpipe["base_url"]:
+			for key in self.__key:
+				url=""
+				if not self._vpipe["base_url"]:
+					if self.__bucket.acp==1:
+						url=self.__bucket.private_url(key,expires)
+					else:
+						url=self.__bucket.public_url(key)
+				else:
+					url=self._vpipe["base_url"]
+				urls.append(url)
+		def concat_url(b_url):
+			if b_url.find("?")<0:
+				b_url+=path	
+				if query_string:
+					b_url+=+"?"+query_string
+			else:
+				if query_string:
+					b_url+="&"+query_string
+			return b_url
+		urls=list(map(concat_url,urls))
+		self.__reset_vpipe()
+		if len(urls)==0:
+			return None
+		elif len(urls)==1:
+			return urls[0]
+		else:
+			return urls
+	@gen.coroutine
+	def get(self,f_name=None):
+		return_data=[]
+		for key_url in zip(self.__key,self.url()):
+			response=yield send_async_request(key_url[1],method="GET",body=None)
+			if not response:
+				return_data.append(None)
+				continue
+			response_type=response.headers.get("Content-Type").split("/")[1]
+			if response_type!="json":
+				if not f_name:
+					file_name="./"+key_url[0]
+				mkdir_recursive(os.path.dirname(file_name))
+				with open(file_name,"a+b") as f:
+					f.write(response.buffer.read())
+				return_data.append(file_name)
+			else:
+				return_data.append(json_decode(bytes_decode(response.body)))
+		if len(return_data)==0:
+			return None
+		if len(return_data)==1:
+			return return_data[0]
+		else:
+			return return_data
+	@gen.coroutine
+	def put(self):
 		pass
+	@gen.coroutine
+	def stat(self):
+		response=yield self.__bucket.stat(self.__key[0],self.__bucket.bucket_name)
+		if response:
+			return json_decode(response)
+	@gen.coroutine
+	def multi_stat(self):
+		batch=self.batch()
+		batch.multi_stat()	
+		response=yield batch.execute()
+		if response:
+			return json_decode(response)
+	@gen.coroutine
+	def delete(self):
+		response=yield self.__bucket.delete(self.__key,self.__bucket.bucket_name)
+		if response:
+			return json_decode(response)
+	@gen.coroutine
+	def multi_delete(self):
+		batch=self.batch()
+		batch.multi_delete()
+		response=yield batch.execute()
+		if response:
+			return json_decode(resposne)
+	@gen.coroutine
+	def list(self,limit=1000,prefix="",delimiter="",marker=""):
+		response=yield self.__bucket.list(self.__bucket.bucket_name,limit,prefix,delimiter,marker)
+		if response:
+			return json_decode(response)
+	@gen.coroutine
+	def moveto(self,dest_key,dest_bucket=None):
+		dest_bucket=dest_bucket or self.__res.bucket.bucket_name
+		response=yield self.__bucket.move(self.__key,self.__bucket.bucket_name,dest_key,dest_bucket or self.__bucket.bucket_name)
+		if response:
+			return json_decode(response)
+	@gen.coroutine
+	def multi_moveto(self,dest_keys,dest_bucket=None):
+		batch=self.batch()
+		batch.multi_move(dest_keys)
+		response=yield batch.execute()
+		if response:
+			return json_decode(response)
+	@gen.coroutine
+	def copyto(self,dest_key,dest_bucket=None):
+		dest_bucket=dest_bucket or self.__res.bucket.bucket_name
+		response=yield self.__bucket.copy(self.__key,self.__bucket.bucket_name,dest_key,dest_bucket)
+		if response:
+			return json_decode(response)
+	@gen.coroutine
+	def multi_copyto(self,dest_keys,dest_bucket):
+		batch=self.batch()
+		batch.multi_copy(dest_keys)
+		response=yield batch.execute()
+		if response:
+			return json_decode(response)
+	def batch(self,cmd=None):
+		return Batch(self,cmd)
+	@gen.coroutine
+	def fetch_store(self,fetch_url):
+		response=yield self.__bucket.fetch_store(fetch_url,self.__key,self.__bucket.bucket_name)
+		if response:
+			return json_decode(response)	
+	@gen.coroutine
+	def prefecth(self):
+		response=yield self.__bucket.prefetch(self.__key,self.__bucket.bucket_name)
+		if response:
+			return json_decode(response)
+	@gen.coroutine
+	def persistent(self,notify_url,pipeline=None,force=1):
+		persistent=self.__bucket.persistent(self.__key,notify_url,fops,force,pipeline)
+		persistent.add_multi_fops(self._vpipe["fops"])
+		response=yield persistent.execute()
+		if response:
+			return json_deocde(response)
+	@gen.coroutine
+	def prefop(self,persistent_id):
+		response=yield self.__bucket.prefop(persistent_id)
+		if response:
+			return json_decode(response)
+	def fops(self,ops):
+		return Fops(self,ops)
+	def qrcode(self):
+		self._vpipe["query_string"].append(QiniuInterface.qrcode()[1])	
+	def imageinfo(self):
+		self._vpipe["query_string"].append(QiniuInterface.imageinfo()[1])
+		return self
+	def imageexif(self):
+		self._vpipe["query_string"].append(QiniuInterface.imageexif()[1])
+		return self
+	def imageave(self):
+		self._vpipe["query_string"].append(QiniuInterface.imageave()[1])
+		return self
+	def avinfo(self):
+		self._vpipe["query_string"].append(QiniuInterface.avinfo()[1])
+		return self
