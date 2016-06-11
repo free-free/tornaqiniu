@@ -37,11 +37,11 @@ class Bucket(object):
 		bucket=bucket or self.__bucket_name
 		assert bucket!=None and bucket!="","invalid bucket"
 		if isinstance(policys,Policy):
-			all_policys=policys.policys()
+			all_policys=policys.policys
 		elif isinstance(policys,dict):
 			all_policys=policys
 		else:
-			all_policys=self.__policy.policys()
+			all_policys=self.__policy.policys
 		return self.__auth.upload_token(bucket,key,expires,all_policys)
 	def private_url(self,key,expires=3600,host=None):
 		"""create private resource url
