@@ -75,7 +75,7 @@ class QiniuInterface(object):
 		return ("",interface)
 	@classmethod
 	def text_watermark(cls,text,**kwargs):
-		interface="watermark/1"
+		interface="watermark/2"
 		interface+='/text/'+str(bytes_decode(urlsafe_base64_encode(text)))
 		if len(kwargs)>0: 
 			valid_fields=set(['font','font_size','fontsize','fill','dissolve','gravity','dx','dy'])
