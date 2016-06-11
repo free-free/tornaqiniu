@@ -27,6 +27,6 @@ PUT_POLICY={
 	"deleteAfterDays":{"type":int,"value":-1}
 }
 
-
+from .common import Policy		
 from .client import QiniuClient
 __all__=("QiniuClient",)

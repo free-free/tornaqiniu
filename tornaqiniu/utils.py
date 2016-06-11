@@ -3,9 +3,13 @@
 import base64
 import hmac
 import json
-from .errors import *
+#from .errors import *
 import urllib
-
+from tornado import gen
+from tornado import httpclient
+from tornado.httpclient import AsyncHTTPClient
+import os
+import time
 def json_encode(need_encode):
 	return json.dumps(need_encode)
 
@@ -38,3 +42,30 @@ def hmac_sha1(key,data):
 def urlencode(need_encode):
 	return urllib.parse.urlencode(need_encode)
 	
+@gen.coroutine
+def send_async_request(url,headers=None,method="GET",body=None):
+	headers=headers or {}
+	if body or method.upper()=="POST":
+		headers["Content-Type"]="application/x-www-form-urlencoded"
+	req=httpclient.HTTPRequest(url,method=method,body=body,headers=headers,allow_nonstandard_methods=True)
+	http_request=AsyncHTTPClient()
+	response=""
+	try:
+		response=yield http_request.fetch(req)
+	except httpclient.HTTPError as e:
+		print("Error:"+str(e))
+	except Exception as e:
+		print("Error:"+str(e))
+	else:
+		return response
+	finally:
+		http_request.close()
+def  mkdir_recursive(dirname,level=1):
+	if level==1:
+		dirname=os.path.abspath(dirname)
+	if  not os.path.exists(os.path.dirname(dirname)):
+		mkdir_recursive(os.path.dirname(dirname),level+1)
+	if not os.path.exists(dirname):
+		os.mkdir(dirname)
+
+
