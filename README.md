@@ -2,7 +2,7 @@
 	tornaqiniu is a qiniu cloud storage client for tornado
 
 ## Get Started:
-1. *upload and download*
+###upload and download
 ```python
 from tornado imoprt gen,ioloop
 from tornaqiniu import QiniuClient
