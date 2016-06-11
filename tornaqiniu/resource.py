@@ -621,9 +621,9 @@ class Resource(object):
 			response_type=response.headers.get("Content-Type").split("/")[1]
 			if response_type!="json":
 				if not f_name:
-					file_name="./"+key_url[0]
+					file_name="./"+key_url[0].rsplit('.',1)[0]+'.'+response_type
 				else:
-					file_name=f_name
+					file_name=f_name.rsplit('.',1)[0]+'.'+response_type
 				mkdir_recursive(os.path.dirname(file_name))
 				with open(file_name,"a+b") as f:
 					f.write(response.buffer.read())
