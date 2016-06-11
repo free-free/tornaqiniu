@@ -341,7 +341,7 @@ class QiniuResourceProcessor(QiniuAVProcessMixin,
 			   QiniuImageProcessMixin):
 	def __init__(self,auth):	
 		self._auth=auth
-	def qrcode_url(self,url,mode=0,level=1):
+	def qrcode_url(self,url,mode=0,level='L'):
 		resulted_url=url
 		interface=QiniuInterface.qrcode(mode,level)
 		if url.find("?")>=0:
@@ -415,7 +415,7 @@ class Fops(object):
 		self.__fops.append(fops)
 		self.__add_fops_to_resource(fops)
 		return self
-	def qrcode(self,mode=0,level=1):
+	def qrcode(self,mode=0,level='L'):
 		fops=QiniuInterface.qrcode(mode,level)[1]
 		self.__fops.append(fops)
 		self.__add_fops_to_resource(fops)
