@@ -29,6 +29,9 @@ class Bucket(object):
 	def bucket_name(self):
 		return self.__bucket_name
 	@property
+	def auth(self):
+		return self.__auth
+	@property
 	def resources(self):
 		return self.__resources
 	def res(self,*res_key):
