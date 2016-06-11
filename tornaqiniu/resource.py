@@ -565,15 +565,15 @@ class Resource(object):
 		urls=[]
 		if len(self._vpipe.get("url_path"))>0:
 				path=''.join(self._vpipe.get("url_path"))
-		#check last called method whether output a query_string
-		if len(self._vpipe.get("query_string"))>0:
-				query_string='&'.join(self._vpipe.get("query_string"))
 		#check last called method whether output a fops
 		if len(self._vpipe.get("fops"))>0:
+				query_string+="|".join(self._vpipe.get("fops"))					
+		#check last called method whether output a query_string
+		if len(self._vpipe.get("query_string"))>0:
 				if query_string:
-					query_string+="&"+"|".join(self._vpipe.get("fops"))
+					query_string+='&'+'&'.join(self._vpipe.get("query_string"))
 				else:
-					query_string+="|".join(self._vpipe.get("fops"))					
+					query_string+="&".join(self._vpipe.get("query_string"))
 		if not self._vpipe["base_url"]:
 			for key in self.__key:
 				url=""
@@ -590,9 +590,12 @@ class Resource(object):
 				b_url+=path	
 				if query_string:
 					b_url+=+"?"+query_string
+				
 			else:
 				if query_string:
-					b_url+="&"+query_string
+					pth,qs=b_url.split('?')
+					pth+=path+"?"+query_string+"&"+qs
+					b_url=pth		
 			return b_url
 		urls=list(map(concat_url,urls))
 		self.__reset_vpipe()
@@ -618,6 +621,8 @@ class Resource(object):
 			if response_type!="json":
 				if not f_name:
 					file_name="./"+key_url[0]
+				else:
+					file_name=f_name
 				mkdir_recursive(os.path.dirname(file_name))
 				with open(file_name,"a+b") as f:
 					f.write(response.buffer.read())
@@ -714,8 +719,6 @@ class Resource(object):
 			return json_decode(response)
 	def fops(self,ops=None):
 		return Fops(ops,self)
-	def qrcode(self):
-		self._vpipe["query_string"].append(QiniuInterface.qrcode()[1])	
 	def imageinfo(self):
 		self._vpipe["query_string"].append(QiniuInterface.imageinfo()[1])
 		return self
