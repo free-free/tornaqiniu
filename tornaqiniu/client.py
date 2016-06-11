@@ -71,7 +71,7 @@ class QiniuClient(object):
 			None
 		"""
 		self._resource_loader.modify_policy(field,value)
-	def update_policys(self,policy_pairs():
+	def update_policys(self,policy_pairs):
 		"""update all policys
 		Args:
 			policy_pairs:dict type
@@ -79,7 +79,7 @@ class QiniuClient(object):
 			None
 		"""
 		self._resource_loader.get_flush_policys()
-		self._add_policys(policy_pairs()
+		self._add_policys(policy_pairs())
 	@property
 	def policys(self):
 		"""get all policys
