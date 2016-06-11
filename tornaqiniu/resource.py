@@ -401,16 +401,17 @@ class Fops(object):
 		if self.__res:
 			self.__res._vpipe["fops"].append(fops)
 	def image_watermark(self,water_image_url,**kwargs):
-		fops=QiniuInterface(water_image_url,**kwargs)[1]
+		fops=QiniuInterface.image_watermark(water_image_url,**kwargs)[1]
 		self.__fops.append(fops)
 		self.__add_fops_to_resource(fops)
 		return self
 	def text_watermark(self,text,**kwargs):
-		fops=QiniuInterface(text,**kwargs)[1]
+		fops=QiniuInterface.text_watermark(text,**kwargs)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def image_view2(self,mode,width=None,height=None,**kwargs):
-		fops=QiniuInterface(mode,width,height,**kwargs)[1]
+		fops=QiniuInterface.image_view2(mode,width,height,**kwargs)[1]
 		self.__fops.append(fops)
 		self.__add_fops_to_resource(fops)
 		return self
@@ -589,7 +590,7 @@ class Resource(object):
 			if b_url.find("?")<0:
 				b_url+=path	
 				if query_string:
-					b_url+=+"?"+query_string
+					b_url+="?"+query_string
 				
 			else:
 				if query_string:
