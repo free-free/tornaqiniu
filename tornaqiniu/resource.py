@@ -392,14 +392,18 @@ class QiniuResourceProcessor(QiniuAVProcessMixin,
 
 
 class Fops(object):
-	def __init__(self,res,fops=None):
+	def __init__(self,fops=None,res=None):
 		self.__res=res
-		self.__fops=[]
+		self.__fops=fops or []
 		if isinstance(fops,(list,tuple)):
 			self.__fops.extend(list(fops))
+	def __add_fops_to_resource(self,fops):
+		if self.__res:
+			self.__res._vpipe["fops"].append(fops)
 	def image_watermark(self,water_image_url,**kwargs):
 		fops=QiniuInterface(water_image_url,**kwargs)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def text_watermark(self,text,**kwargs):
 		fops=QiniuInterface(text,**kwargs)[1]
@@ -408,34 +412,41 @@ class Fops(object):
 	def image_view2(self,mode,width=None,height=None,**kwargs):
 		fops=QiniuInterface(mode,width,height,**kwargs)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def qrcode(self,mode=0,level=1):
 		fops=QiniuInterface.qrcode(mode,level)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def avthumb_transcoding(self,frmt,**kwargs):
 		fops=QiniuInterface.avthumb_transcoding(frmt,**kwargs)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def avthumb_slice(self,no_domain,**kwargs):
 		fops=QiniuInterface.avthumb_slice(no_domain,**kwargs)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def avconcat(self,mode,frmt,*urls):
 		fops=QiniuInterface.avconcat(mode,frmt,*urls)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def vframe(self,out_img_frmt,offset,**kwargs):
 		fops=QiniuInterface.vframe(out_img_url,offset,**kwargs)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def vsample(self,out_img_frmt,start_time,sample_time,**kwargs):
 		fops=QiniuInterface.vsample(out_img_frmt,start_time,sample_time,**kwargs)[1]
 		self.__fops.append(fops)
+		self.__add_fops_to_resource(fops)
 		return self
 	def __getattr__(self,attr):
-		if hasattr(self,attr):
-			return getattr(self,attr)
+		if attr in ('persistent','url','get'):
+			return getattr(self.__res,attr)
 		else:
 			raise Exception("No such attribute '%s'"%attr)
 	@property
@@ -548,9 +559,10 @@ class Resource(object):
 		self._vpipe["url_path"]=[]
 		self._vpipe["base_url"]=None
 		self._vpipe["fops"]=[]
-	def url(self,expires=3600):
+	def url(self,expires=3600,return_raw=False):
 		path=""
 		query_string=""
+		urls=[]
 		if len(self._vpipe.get("url_path"))>0:
 				path=''.join(self._vpipe.get("url_path"))
 		#check last called method whether output a query_string
@@ -558,8 +570,10 @@ class Resource(object):
 				query_string='&'.join(self._vpipe.get("query_string"))
 		#check last called method whether output a fops
 		if len(self._vpipe.get("fops"))>0:
-				query_string=+"&"+"|".join(self._vpipe.get("fops"))
-		urls=[]
+				if query_string:
+					query_string+="&"+"|".join(self._vpipe.get("fops"))
+				else:
+					query_string+="|".join(self._vpipe.get("fops"))					
 		if not self._vpipe["base_url"]:
 			for key in self.__key:
 				url=""
@@ -582,16 +596,20 @@ class Resource(object):
 			return b_url
 		urls=list(map(concat_url,urls))
 		self.__reset_vpipe()
-		if len(urls)==0:
-			return None
-		elif len(urls)==1:
-			return urls[0]
-		else:
+		if return_raw:
 			return urls
+		else:
+			if len(urls)==0:
+				return None
+			elif len(urls)==1:
+				return urls[0]
+			else:
+				return urls
 	@gen.coroutine
 	def get(self,f_name=None):
 		return_data=[]
-		for key_url in zip(self.__key,self.url()):
+		url=self.url(return_raw=True)
+		for key_url in zip(self.__key,url):
 			response=yield send_async_request(key_url[1],method="GET",body=None)
 			if not response:
 				return_data.append(None)
@@ -694,8 +712,8 @@ class Resource(object):
 		response=yield self.__bucket.prefop(persistent_id)
 		if response:
 			return json_decode(response)
-	def fops(self,ops):
-		return Fops(self,ops)
+	def fops(self,ops=None):
+		return Fops(ops,self)
 	def qrcode(self):
 		self._vpipe["query_string"].append(QiniuInterface.qrcode()[1])	
 	def imageinfo(self):
