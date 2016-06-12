@@ -4,6 +4,7 @@ from tornado import gen
 from .common import Policy
 from .resource import Resource,QiniuResourceLoader,QiniuResourceManager,QiniuResourceProcessor
 from .interface import QiniuInterface
+from .utils import *
 class Bucket(object):
 	def __init__(self,host,auth,bucket_name,bucket_acp=0):
 		r"""
@@ -64,6 +65,15 @@ class Bucket(object):
 			resource public url
 		"""
 		return self.__res_loader.public_url(key,host or self.__host)
+	@gen.coroutine
+	def put(self,key,filename,host="upload.qiniu.com",accept="json"):
+		response=yield self.__res_loader.single_upload(key,self.bucket_name,filename,host,accept)
+		if accept.lower()=='json':
+			if response:
+				return json_decode(bytes_decode(response.body))
+		else:
+			if response:
+				return bytes_decode(response.body)
 	@gen.coroutine
 	def stat(self,key,bucket=None):
 		"""get resource detail information
