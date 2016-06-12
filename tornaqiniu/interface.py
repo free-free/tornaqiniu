@@ -174,4 +174,4 @@ class QiniuInterface(object):
 	def saveas(self,key,bucket):
 		encoded_entry=bytes_decode(urlsafe_base64_encode(bucket+':'+key))
 		interface="saveas/"+encoded_entry
-		return ("".interface) 			 
+		return ("",interface) 			 
