@@ -453,6 +453,44 @@ class Fops(object):
 	@property
 	def fops(self):
 		return self.__fops
+	def saveas(self,saved_keys,bucket=None,expires=3600):
+		bucket=bucket or self.__res.bucket.bucket_name
+		base_urls=[]
+		saved_ks=[]
+		if isinstance(saved_keys,str):
+			saved_ks.append(saved_keys)
+		else:
+			saved_ks.extend(saved_keys)
+
+		assert len(saved_ks)==len(self.__res.key
+)
+		for key in zip(self.__res.key,saved_ks):
+			if self.__res.bucket.acp==1:
+				download_url=self.__res.bucket.private_url(key[0],expires)
+				new_url,qs=download_url.split("?")
+				new_url=new_url[7:]#remove http scheme(http://)
+				new_url+="?"+"|".join(self.fops)
+				interface=QiniuInterface.saveas(key[1],bucket)[1]
+				new_url+="|"+interface
+				access_token=self.__res.bucket.auth.access_token(new_url)
+				
+				base_urls.append("http://"+new_url+'/sign/'+access_token+"&"+qs)
+			else:
+				download_url=self.__res.bucket.public_url(key[0])
+				new_url=download_url[7:]
+				new_url+="?"+"|".join(self.fops)
+				interface=QiniuInterface.saveas(key[1],bucket)[1]
+				new_url+="|"+interface
+				access_token=self.__res.bucket.auth.access_token(new_url)
+				base_urls.append("http://"+new_url+"/sign/"+access_token)
+		self.__res._vpipe["base_url"]=base_urls
+		self.__fops=[]
+		self.__res._vpipe["fops"]=[]
+		return self.__res
+			
+			
+			
+			
 class Batch(object):
 	def __init__(self,res,cmd=None):
 		self.__res=res
@@ -547,8 +585,9 @@ class Resource(object):
 			bucket:bucket object,
 		"""
 		self.__key=list(key)
-		self.__bucket=bucket
-		self._vpipe={"query_string":[],"url_path":[],"base_url":None,"fops":[]}
+		self.__bucket=bucket	
+		self._vpipe={"query_string":[],"url_path":[],"base_url":[],"fops":[]}#if len(self._vpipe["base_url"]>0,then len(self._vpipe["base_url"] must equal to len(self.__key)
+		
 	@property
 	def bucket(self):
 		return self.__bucket
@@ -558,7 +597,7 @@ class Resource(object):
 	def __reset_vpipe(self):
 		self._vpipe["query_string"]=[]
 		self._vpipe["url_path"]=[]
-		self._vpipe["base_url"]=None
+		self._vpipe["base_url"]=[]
 		self._vpipe["fops"]=[]
 	def url(self,expires=3600,return_raw=False):
 		path=""
@@ -575,17 +614,17 @@ class Resource(object):
 					query_string+='&'+'&'.join(self._vpipe.get("query_string"))
 				else:
 					query_string+="&".join(self._vpipe.get("query_string"))
-		if not self._vpipe["base_url"]:
+		if len(self._vpipe["base_url"])==0:
 			for key in self.__key:
 				url=""
-				if not self._vpipe["base_url"]:
-					if self.__bucket.acp==1:
-						url=self.__bucket.private_url(key,expires)
-					else:
-						url=self.__bucket.public_url(key)
+				if self.__bucket.acp==1:
+					url=self.__bucket.private_url(key,expires)
 				else:
-					url=self._vpipe["base_url"]
+					url=self.__bucket.public_url(key)
 				urls.append(url)
+		else:
+			urls=self._vpipe["base_url"]
+
 		def concat_url(b_url):
 			if b_url.find("?")<0:
 				b_url+=path	
