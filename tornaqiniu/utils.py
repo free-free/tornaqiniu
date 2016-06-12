@@ -10,6 +10,8 @@ from tornado import httpclient
 from tornado.httpclient import AsyncHTTPClient
 import os
 import time
+import random
+import hashlib
 def json_encode(need_encode):
 	return json.dumps(need_encode)
 
@@ -46,7 +48,8 @@ def urlencode(need_encode):
 def send_async_request(url,headers=None,method="GET",body=None):
 	headers=headers or {}
 	if body or method.upper()=="POST":
-		headers["Content-Type"]="application/x-www-form-urlencoded"
+		if 'Content-Type' not in headers:
+			headers["Content-Type"]="application/x-www-form-urlencoded"
 	req=httpclient.HTTPRequest(url,method=method,body=body,headers=headers,allow_nonstandard_methods=True)
 	http_request=AsyncHTTPClient()
 	response=""
@@ -67,5 +70,31 @@ def  mkdir_recursive(dirname,level=1):
 		mkdir_recursive(os.path.dirname(dirname),level+1)
 	if not os.path.exists(dirname):
 		os.mkdir(dirname)
+def multipart_formdata(fields,files):
+	md5=hashlib.md5()
+	md5.update(str(random.random()).encode())
+	boundary='-----'+md5.hexdigest()
+	CRLF=b'\r\n'
+	data=[]
+	for key,value in fields.items():
+		data.append(('--'+boundary).encode())
+		data.append(('Content-Disposition: form-data; name="%s"'%key).encode())
+		data.append(b'')
+		data.append(value.encode())
+	for key,filename in files.items():
+		data.append(('--'+boundary).encode())
+		data.append(('Content-Disposition: form-data; name="%s"; filename="%s"'%(key,filename)).encode())
+		data.append(('Content-Type: application/octet-stream').encode())
+		data.append(("Content-Transfer-Encoding: binary").encode())
+		data.append(b'')
+		with open(filename,"r+b") as f:
+			data.append(f.read())
+	data.append(('--'+boundary+'--').encode())
+	data.append(b'')
+	data=CRLF.join(data)
+	content_type="multipart/form-data; boundary=%s"%boundary
+	return content_type,data
+	
 
+		
 
