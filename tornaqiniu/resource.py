@@ -41,6 +41,22 @@ class QiniuResourceLoader(object):
 				host:resource host name
 		"""
 		return self._gen_private_url(key,expires,host)
+	@gen.coroutine
+	def single_upload(self,key,file_name,host="upload.qiniu.com",accept="json"):
+		upload_token=self._auth.upload_token(key)
+		fields={}
+		if key:
+			fields['key']=key
+		fields['token']=upload_token
+		fields['crc32']=''
+		fields['accept']='application/'+accept
+		files={}
+		files['file']=file_name
+		content_type,body=multipart_formdata(fields,files)
+		headers={}
+		headers['Content-Type']=content_type
+		response=yield send_async_request("http://"+host,headers=headers,method="POST",body=body)
+		return response
 	def private_urls(self,keys,host,expires=3600,key_name=None):
 		"""
 			generate multi private urls at the same time
