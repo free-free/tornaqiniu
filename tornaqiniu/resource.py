@@ -42,20 +42,22 @@ class QiniuResourceLoader(object):
 		"""
 		return self._gen_private_url(key,expires,host)
 	@gen.coroutine
-	def single_upload(self,key,file_name,host="upload.qiniu.com",accept="json"):
-		upload_token=self._auth.upload_token(key)
+	def single_upload(self,key,bucket,file_name,host="upload.qiniu.com",accept="json"):
+		upload_token=self._auth.upload_token(bucket,key)
 		fields={}
 		if key:
 			fields['key']=key
 		fields['token']=upload_token
-		fields['crc32']=''
+		#fields['crc32']='1'
 		fields['accept']='application/'+accept
 		files={}
 		files['file']=file_name
 		content_type,body=multipart_formdata(fields,files)
 		headers={}
 		headers['Content-Type']=content_type
-		response=yield send_async_request("http://"+host,headers=headers,method="POST",body=body)
+		headers['Content-Length']=str(len(body))
+		headers['Host']=host
+		response=yield send_async_request("http://"+host+'/',headers=headers,method="POST",body=body)
 		return response
 	def private_urls(self,keys,host,expires=3600,key_name=None):
 		"""
@@ -692,8 +694,15 @@ class Resource(object):
 		else:
 			return return_data
 	@gen.coroutine
-	def put(self):
-		pass
+	def put(self,filename,host="upload.qiniu.com",accept="json"):
+		responses=[]
+		for key in self.__key:
+			response=yield self.__bucket.put(key,filename,host,accept)
+			responses.append(response)
+		if len(responses)==1:
+			return responses[0]
+		else:
+			return responses
 	@gen.coroutine
 	def stat(self):
 		response=yield self.__bucket.stat(self.__key[0],self.__bucket.bucket_name)
