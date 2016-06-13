@@ -70,7 +70,9 @@ class QiniuResourceLoader(object):
 		# default upload block size,unit: byte
 		BLOCK_SIZE=4194304#4MB
 		# total block number of file
-		total_block_num=filesize//BLOCK_SIZE
+		total_block_num=(filesize//BLOCK_SIZE)
+		if (filesize%BLOCK_SIZE)>0:
+			total_block_num+=1
 		# each block uploading begin index 
 		start_block_id=0
 		# block number of each uploading
