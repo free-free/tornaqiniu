@@ -77,28 +77,27 @@ class QiniuResourceLoader(object):
 		e_block_num=3
 		# last ctx information list of all block
 		ctxlist=[]
-		with open(filename,'r+b') as f:
-			while True:
-				blocks=[]
-				print("one time")
-				if total_block_num<=0:
-					break	
-				if 0<total_block_num<e_block_num:
-					e_block_num=total_block_num
-				for bid in range(start_block_id,e_block_num):
-					block_data=f.read(BLOCK_SIZE)
-					blocks.append({'block':block_data,'rbsize':len(block_data)})
-				#update block start id 
-				start_block_id+=e_block_num
-				executor=ThreadPoolExecutor(max_workers=4)
-				upload_coroutines=[self._block_upload(executor,block['block'],upload_token,host,block['rbsize']) for block in blocks]
-				responses=yield upload_coroutines
-				executor.shutdown()
-				for response in responses:
-					print("response time")
-					ctxlist.append(response.get('ctx'))
-				blocks=[]
-				total_block_num-=e_block_num
+		executor=ThreadPoolExecutor(max_workers=4)
+		with ThreadPoolExecutor(max_workers=4) as executor:
+			with open(filename,'r+b') as f:
+				while True:
+					blocks=[]
+					print("one time")
+					if total_block_num<=0:
+						break	
+					if 0<total_block_num<e_block_num:
+						e_block_num=total_block_num
+					for bid in range(start_block_id,start_block_id+e_block_num):
+						block_data=f.read(BLOCK_SIZE)
+						blocks.append({'block':block_data,'rbsize':len(block_data)})
+					#update block start id 
+					start_block_id+=e_block_num
+					upload_coroutines=[self._block_upload(executor,block['block'],upload_token,host,block['rbsize']) for block in blocks]
+					responses=yield upload_coroutines
+					for response in responses:
+						ctxlist.append(response.get('ctx'))
+					blocks=[]
+					total_block_num-=e_block_num
 		#merge all block info origin  file
 		print("start mkfile")
 		print(ctxlist)
@@ -157,7 +156,7 @@ class QiniuResourceLoader(object):
 		url="http://"+host+'/mkfile/'+str(filesize)
 		if key:
 			encoded_key=bytes_decode(urlsafe_base64_encode(key))
-			url+='/key'+str(encoded_key)
+			url+='/key/'+str(encoded_key)
 		response=yield send_async_request(url,method="POST",headers=headers,body=ctx)
 		if response:
 			return json_decode(bytes_decode(response.body))
