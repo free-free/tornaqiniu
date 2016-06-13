@@ -1,6 +1,7 @@
 #-*- coding:utf-8 -*-
 import functools
 from tornado import gen
+import os
 from .common import Policy
 from .resource import Resource,QiniuResourceLoader,QiniuResourceManager,QiniuResourceProcessor
 from .interface import QiniuInterface
@@ -67,13 +68,21 @@ class Bucket(object):
 		return self.__res_loader.public_url(key,host or self.__host)
 	@gen.coroutine
 	def put(self,key,filename,host="upload.qiniu.com",accept="json"):
-		response=yield self.__res_loader.single_upload(key,self.bucket_name,filename,host,accept)
-		if accept.lower()=='json':
-			if response:
-				return json_decode(bytes_decode(response.body))
+		filesize=os.path.getsize(filename)
+		#when file size greater than 4 MB,using shard uploading 
+		if filesize>4194304:
+			print('shading upload')
+			response=yield self.__res_loader.shard_upload(key,filename,self.bucket_name,host)
+			return response
 		else:
-			if response:
-				return bytes_decode(response.body)
+			print('single upload')
+			response=yield self.__res_loader.single_upload(key,self.bucket_name,filename,host,accept)
+			if accept.lower()=='json':
+				if response:
+					return json_decode(bytes_decode(response.body))
+			else:
+				if response:
+					return bytes_decode(response.body)
 	@gen.coroutine
 	def stat(self,key,bucket=None):
 		"""get resource detail information
