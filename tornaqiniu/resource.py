@@ -59,6 +59,73 @@ class QiniuResourceLoader(object):
 		headers['Host']=host
 		response=yield send_async_request("http://"+host+'/',headers=headers,method="POST",body=body)
 		return response
+	@gen.coroutine
+	def shard_upload(self,key,filename,bucket,host="upload.qiniu.com"):
+		upload_token=self._auth.upload_token(bucket,key)
+		with open(filename,'r+b') as f:
+			blocks=[]
+			for i in range(0,4):
+				blocks.append(f.read(1024*1024*4))
+			
+				
+	@gen.coroutine
+	def _block_upload(self,block,upload_token,host,block_size=4194304):
+		start_point=0
+		end_point=4096
+		real_bsize=len(block)
+		if (real_size-start_point)<4096:
+			end_point=real_size
+		chunk=block[start_point:end_point]
+		start_point=end_point
+		end_point+=4096
+		response=yield self._mkblock(chuck,upload_token,host,block_size)
+		if not response:
+			raise Exception("block create failed")
+		while start_point<real_bsize:
+			if (real_size-start_point)<4096:
+				end_point=real_size
+			chunk=block[start_point:end_point]
+			start_point=end_point
+			end_point+=4096
+			response=yield self._bput(chunk,response['ctx'],response['offset'],upload_token,host)
+			if not response:
+				pass
+		return response	
+	@gen.coroutine
+	def _mkblock(self,first_chunk,upload_token,host,block_size=4194304):
+		headers={}
+		headers['Host']=host
+		headers['Content-Type']='application/octet-stream'
+		headers['Content-Length']=len(first_chunk)
+		headers['Authorization']='UpToken '+upload_token
+		response=yield send_async_request("/mkblk/"+str(block_size),method="POST",headers=headers,body=first_chunk)
+		if response:
+			return json_decode(bytes_decode(response.body))
+	@gen.coroutine
+	def _bput(self,chunk,ctx,offset,upload_token,host):
+		headers={}
+		headers['Host']=host
+		headers['Content-Type']='application/octet-stream'
+		headers['Content-Length']=len(chunk)
+		headers['Authorization']="UpToken "+upload_token
+		response=yield send_async_request("/bput/"+str(ctx)+'/'+str(offset),method="POST",headers=headers,body=chunk)
+		if response:
+			return json_decode(bytes_decode(response.body))
+	@gen.coroutine
+	def _mkfile(self,key,filesize,ctxlist,upload_token,host):
+		ctx=','.join(ctxlist)
+		headers={}
+		headers['Host']=host
+		headers['Content-Type']='text/plain'
+		headers['Content-Length']=len(ctx)
+		headers['Authorization']="UpToken "+upload_token
+		url='/mkfile/'+str(filesize)
+		if key:
+			encoded_key=bytes_decode(urlsafe_base64_encode(key))
+			url+='/key'+str(encoded_key)
+		response=yield send_async_request(url,method="POST",headers=headers,body=ctx)
+		if response:
+			return json_decode(bytes_decode(response.body))
 	def private_urls(self,keys,host,expires=3600,key_name=None):
 		"""
 			generate multi private urls at the same time
