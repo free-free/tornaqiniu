@@ -63,6 +63,25 @@ def send_async_request(url,headers=None,method="GET",body=None):
 		return response
 	finally:
 		http_request.close()
+
+def send_sync_request(url,headers=None,method="GET",body=None):
+	headers=headers or {}
+	if body or method.upper()=="POST":
+		if "Content-Type" not in headers:
+			headers["Content-Type"]="application/x-www-form-urlencoded"
+	req=httpclient.HTTPRequest(url,method=method,body=body,headers=headers,allow_nonstandard_methods=True)
+	http_client=httpclient.HTTPClient()
+	response=""
+	try:
+		response=http_client.fetch(req)
+		return response
+	except httpclient.HTTPError as e:
+		print("Error:"+str(e))
+	except Exception as e:
+		print("Error:"+str(e))
+	finally:
+		http_client.close()
+
 def  mkdir_recursive(dirname,level=1):
 	if level==1:
 		dirname=os.path.abspath(dirname)
