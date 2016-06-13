@@ -1,5 +1,7 @@
 #-*- coding:utf-8 -*-
 from tornado import gen,httpclient
+from tornado.concurrent import Future
+from concurrent.futures import ThreadPoolExecutor
 import hmac
 import hashlib
 import base64
@@ -61,54 +63,87 @@ class QiniuResourceLoader(object):
 		return response
 	@gen.coroutine
 	def shard_upload(self,key,filename,bucket,host="upload.qiniu.com"):
+		#upload token
 		upload_token=self._auth.upload_token(bucket,key)
+		#file size
+		filesize=os.path.getsize(filename)
+		# default upload block size,unit: byte
+		BLOCK_SIZE=4194304#4MB
+		# total block number of file
+		total_block_num=filesize//BLOCK_SIZE
+		# each block uploading begin index 
+		start_block_id=0
+		# block number of each uploading
+		e_block_num=3
+		# last ctx information list of all block
+		ctxlist=[]
 		with open(filename,'r+b') as f:
-			blocks=[]
-			for i in range(0,4):
-				blocks.append(f.read(1024*1024*4))
-			
-				
+			while True:
+				blocks=[]
+				print("one time")
+				if total_block_num<=0:
+					break	
+				if 0<total_block_num<e_block_num:
+					e_block_num=total_block_num
+				for bid in range(start_block_id,e_block_num):
+					block_data=f.read(BLOCK_SIZE)
+					blocks.append({'block':block_data,'rbsize':len(block_data)})
+				#update block start id 
+				start_block_id+=e_block_num
+				executor=ThreadPoolExecutor(max_workers=4)
+				upload_coroutines=[self._block_upload(executor,block['block'],upload_token,host,block['rbsize']) for block in blocks]
+				responses=yield upload_coroutines
+				executor.shutdown()
+				for response in responses:
+					print("response time")
+					ctxlist.append(response.get('ctx'))
+				blocks=[]
+				total_block_num-=e_block_num
+		#merge all block info origin  file
+		print("start mkfile")
+		print(ctxlist)
+		response=yield self._mkfile(key,filesize,ctxlist,upload_token,host)			
+		return response				
 	@gen.coroutine
-	def _block_upload(self,block,upload_token,host,block_size=4194304):
+	def _block_upload(self,executor,block,upload_token,host,block_size=4194304):
 		start_point=0
-		end_point=4096
-		real_bsize=len(block)
-		if (real_size-start_point)<4096:
-			end_point=real_size
+		CHUNK_SIZE=262144# 256KB
+		end_point=CHUNK_SIZE
+		if (block_size-start_point)<CHUNK_SIZE:
+			end_point=block_size
 		chunk=block[start_point:end_point]
 		start_point=end_point
-		end_point+=4096
-		response=yield self._mkblock(chuck,upload_token,host,block_size)
-		if not response:
-			raise Exception("block create failed")
-		while start_point<real_bsize:
-			if (real_size-start_point)<4096:
-				end_point=real_size
+		end_point+=CHUNK_SIZE
+		future=executor.submit(self._mkblock,chunk,upload_token,host,block_size)
+		response=yield future
+		print("mkblock ending")
+		while start_point<block_size:
+			print("start bput")
+			if (block_size-start_point)<CHUNK_SIZE:
+				end_point=block_size
 			chunk=block[start_point:end_point]
 			start_point=end_point
-			end_point+=4096
-			response=yield self._bput(chunk,response['ctx'],response['offset'],upload_token,host)
-			if not response:
-				pass
-		return response	
-	@gen.coroutine
+			end_point+=CHUNK_SIZE
+			future=executor.submit(self._bput,chunk,response['ctx'],response['offset'],upload_token,host)
+			response=yield future
+		print("end bput")
+		return response
 	def _mkblock(self,first_chunk,upload_token,host,block_size=4194304):
 		headers={}
 		headers['Host']=host
 		headers['Content-Type']='application/octet-stream'
 		headers['Content-Length']=len(first_chunk)
 		headers['Authorization']='UpToken '+upload_token
-		response=yield send_async_request("/mkblk/"+str(block_size),method="POST",headers=headers,body=first_chunk)
+		response=send_sync_request("http://"+host+"/mkblk/"+str(block_size),method="POST",headers=headers,body=first_chunk)
 		if response:
 			return json_decode(bytes_decode(response.body))
-	@gen.coroutine
 	def _bput(self,chunk,ctx,offset,upload_token,host):
 		headers={}
 		headers['Host']=host
 		headers['Content-Type']='application/octet-stream'
 		headers['Content-Length']=len(chunk)
 		headers['Authorization']="UpToken "+upload_token
-		response=yield send_async_request("/bput/"+str(ctx)+'/'+str(offset),method="POST",headers=headers,body=chunk)
+		response=send_sync_request("http://"+host+"/bput/"+str(ctx)+'/'+str(offset),method="POST",headers=headers,body=chunk)
 		if response:
 			return json_decode(bytes_decode(response.body))
 	@gen.coroutine
@@ -119,7 +154,7 @@ class QiniuResourceLoader(object):
 		headers['Content-Type']='text/plain'
 		headers['Content-Length']=len(ctx)
 		headers['Authorization']="UpToken "+upload_token
-		url='/mkfile/'+str(filesize)
+		url="http://"+host+'/mkfile/'+str(filesize)
 		if key:
 			encoded_key=bytes_decode(urlsafe_base64_encode(key))
 			url+='/key'+str(encoded_key)
