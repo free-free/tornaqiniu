@@ -44,7 +44,7 @@ class QiniuResourceLoader(object):
 		"""
 		return self._gen_private_url(key,expires,host)
 	@gen.coroutine
-	def single_upload(self,key,bucket,file_name,host="upload.qiniu.com",accept="json"):
+	def single_upload(self,key,filename,bucket,host="upload.qiniu.com",accept="json"):
 		upload_token=self._auth.upload_token(bucket,key)
 		fields={}
 		if key:
@@ -53,7 +53,7 @@ class QiniuResourceLoader(object):
 		#fields['crc32']='1'
 		fields['accept']='application/'+accept
 		files={}
-		files['file']=file_name
+		files['file']=filename
 		content_type,body=multipart_formdata(fields,files)
 		headers={}
 		headers['Content-Type']=content_type
