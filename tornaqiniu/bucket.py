@@ -76,7 +76,7 @@ class Bucket(object):
 			return response
 		else:
 			print('single upload')
-			response=yield self.__res_loader.single_upload(key,self.bucket_name,filename,host,accept)
+			response=yield self.__res_loader.single_upload(key,filename,self.bucket_name,host,accept)
 			if accept.lower()=='json':
 				if response:
 					return json_decode(bytes_decode(response.body))
