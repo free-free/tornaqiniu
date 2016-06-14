@@ -2,7 +2,7 @@
 	tornaqiniu is a qiniu cloud storage client for tornado
 
 ## Get Started:
-### 1.upload and download
+### 1.Resource Upload and Download
 ```python
 from tornado imoprt gen,ioloop
 from tornaqiniu import QiniuClient
@@ -44,7 +44,61 @@ def upload():
 loop.run_sync(upload)
 loop.close()
 ```
+### 2.Resource Management
+```python
 
+from tornado import gen,ioloop
+from tornaqiniu import QiniuClient
+
+access_key="your qiniu access key"
+secret_key="your qiniu secret key"
+bucket="your bucket name"
+domain="your domain"
+bucket_acp=0   #bucket access property,1 ===>private bucket,0===>public bucket
+
+client=QiniuClient(access_key,secret_key,domain)
+bucket=client.bucket(bucket,bucket_acp=bucket_acp)
+
+loop=ioloop.IOLoop.current()
+
+#single resource management
+@gen.coroutine
+def single_resource_manage():
+	#resource state
+	state=yield bucket.res('key').stat()
+
+	#resource deleting
+	yield bucket.res('key').delete()
+	
+	#resource moving
+	yield bucket.res('src_key').moveto('dest_key','dest_bucket')
+	
+	#resource coping
+	yield bucket.res('src_key').copyto('dest_key','dest_bucket')
+loop.run_sync(single_resource_manage)
+	
+
+#multi resource management
+@gen.coroutine
+def multi_resource_manage():
+	#multi resource state
+	state=yield bucket.res('key1','key2','key3').multi_stat()
+	
+	#multi resource deleting
+	yield bucket.res('key1','key2','key3').multi_delete()
+	
+	#multi resource coping
+	yield bucket.res(*['key1','key2','key3']).multi_copyto(['dest_key1','dest_key2','dest_key3'],'dest_bucket')
+	
+	#multi resource moving
+	yield bucket.res('key1','key2','key3').multi_moveto(['dest_key1','dest_key2','dest_key3'],'dest_bucket')
+		
+
+loop.run_sync(multi_resource_manage)
+
+	
+
+```
 ## Updating
 	..............
   
