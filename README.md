@@ -2,7 +2,7 @@
 	tornaqiniu is a qiniu cloud storage client for tornado
 
 ## Get Started:
-1.**upload and download**
+### 1.upload and download
 ```python
 from tornado imoprt gen,ioloop
 from tornaqiniu import QiniuClient
@@ -31,6 +31,17 @@ def get_resource():
 	print(response)
 loop=ioloop.IOLoop.current()
 loop.run_sync(get_resource)
+
+# upload resource
+@gen.coroutine
+def upload():
+	#when file's size greater than 4MB,using shard uploading 
+	#after uploading successfully,return key name and file hash value
+
+	response=yield bucket.res("key").put("./testfile") 
+	print(response)
+
+loop.run_sync(upload)
 loop.close()
 ```
 
