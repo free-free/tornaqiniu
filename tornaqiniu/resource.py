@@ -101,7 +101,6 @@ class QiniuResourceLoader(object):
 					blocks=[]
 					total_block_num-=e_block_num
 		#merge all block info origin  file
-		print("start mkfile")
 		print(ctxlist)
 		response=yield self._mkfile(key,filesize,ctxlist,upload_token,host)			
 		return response				
@@ -117,9 +116,7 @@ class QiniuResourceLoader(object):
 		end_point+=CHUNK_SIZE
 		future=executor.submit(self._mkblock,chunk,upload_token,host,block_size)
 		response=yield future
-		print("mkblock ending")
 		while start_point<block_size:
-			print("start bput")
 			if (block_size-start_point)<CHUNK_SIZE:
 				end_point=block_size
 			chunk=block[start_point:end_point]
@@ -127,7 +124,6 @@ class QiniuResourceLoader(object):
 			end_point+=CHUNK_SIZE
 			future=executor.submit(self._bput,chunk,response['ctx'],response['offset'],upload_token,host)
 			response=yield future
-		print("end bput")
 		return response
 	def _mkblock(self,first_chunk,upload_token,host,block_size=4194304):
 		headers={}
