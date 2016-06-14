@@ -9,14 +9,14 @@ from tornaqiniu import QiniuClient
 
 access_key="your qiniu access key"
 secret_key="your qiniu secret key"
-bucket="your bucket name"
+bucket_name="your bucket name"
 domain="your domain"
 bucket_acp=0   #bucket access property,1 ===>private bucket,0===>public bucket
 
 client=QiniuClient(access_key,secret_key,domain)
 
 #get a bucket instance
-bucket=client.bucket(bucket,bucket_acp=1)
+bucket=client.bucket(bucket_name,bucket_acp=1)
 
 #get bucket upload token
 bucket.upload_token()
@@ -52,12 +52,12 @@ from tornaqiniu import QiniuClient
 
 access_key="your qiniu access key"
 secret_key="your qiniu secret key"
-bucket="your bucket name"
+bucket_name="your bucket name"
 domain="your domain"
 bucket_acp=0   #bucket access property,1 ===>private bucket,0===>public bucket
 
 client=QiniuClient(access_key,secret_key,domain)
-bucket=client.bucket(bucket,bucket_acp=bucket_acp)
+bucket=client.bucket(bucket_name,bucket_acp=bucket_acp)
 
 loop=ioloop.IOLoop.current()
 
@@ -96,7 +96,10 @@ def multi_resource_manage():
 
 loop.run_sync(multi_resource_manage)
 
-	
+# resource management bacth operation
+@gen.coroutine
+def bacth_ops():
+	pass	
 
 ```
 ## Updating
