@@ -88,10 +88,10 @@ def multi_resource_manage():
 	yield bucket.res('key1','key2','key3').multi_delete()
 	
 	#multi resource coping
-	yield bucket.res(*['key1','key2','key3']).multi_copyto(['dest_key1','dest_key2','dest_key3'],'dest_bucket')
+	yield bucket.res(*['key1','key2']).multi_copyto(['dest_key1','dest_key2'],'dest_bucket')
 	
 	#multi resource moving
-	yield bucket.res('key1','key2','key3').multi_moveto(['dest_key1','dest_key2','dest_key3'],'dest_bucket')
+	yield bucket.res('key1','key2').multi_moveto(['dest_key1','dest_key2'],'dest_bucket')
 		
 
 loop.run_sync(multi_resource_manage)
@@ -99,7 +99,11 @@ loop.run_sync(multi_resource_manage)
 # resource management bacth operation
 @gen.coroutine
 def bacth_ops():
-	pass	
+	#get batch instance
+	batch=bucket.res().batch()
+	batch.stat('keyname1')	
+	batch.delete('keyname2')
+	yield batch.execute()
 
 ```
 ## Updating
