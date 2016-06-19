@@ -103,8 +103,18 @@ def bacth_ops():
 	batch=bucket.res().batch()
 	batch.stat('keyname1')	
 	batch.delete('keyname2')
+	#execute batch
 	yield batch.execute()
-
+	
+	#multi resource batch operation
+	batch=bucket.res('key1','key2').batch()
+	batch.multi_stat()
+	batch.multi_copy(['dest_key1','dest_key2'],'dest_bucket')
+	batch.multi_move(['dest_k1','dest_k2'],'dest_bucket')
+	#list all resources in current bucket
+	batch.list()
+	#execute batch ,return json format data
+	yield bacth.execute()
 ```
 ## Updating
 	..............
