@@ -23,12 +23,15 @@ bucket.upload_token()
 
 # get resource url
 bucket.res("resource_key").url()
-
+bucket.res('key1','key2').url()
 # download resource
 @gen.coroutine
 def get_resource():
 	response=yield bucket.res("resource_key").get()#return download file saved name
-	print(response)
+
+	# get multi resource 
+	response=yield bucket.res('key1','key2').get()#return resource saved fiel name
+	
 loop=ioloop.IOLoop.current()
 loop.run_sync(get_resource)
 
