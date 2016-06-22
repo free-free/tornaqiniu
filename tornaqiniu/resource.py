@@ -2,10 +2,10 @@
 
 import logging
 logging.basicConfig(level=logging.ERROR)
-from tornado import gen,httpclient
+from tornado import gen, httpclient
 from tornado.concurrent import Future
 from concurrent.futures import ThreadPoolExecutor
-import threading 
+import threading
 import hmac
 import hashlib
 import base64
@@ -29,22 +29,23 @@ import os
 
 class QiniuResourceLoader(object):
 
-    def __init__(self,auth):
-        self._auth=auth
+    def __init__(self, auth):
+        self._auth = auth
 
-    def _gen_private_url(self,key,host,expires=3600):
-        assert host != None and host != "","download host can' be empty"
+    def _gen_private_url(self, key, host, expires=3600):
+        assert host != None and host != "", "download host can' be empty"
         if not host.startswith("http://"):
             host = "http://" + host
         download_url = host + '/' + key
         token = self._auth.download_token(download_url, expires=expires)
-        download_url += '?e='+str(int(datetime.timestamp(datetime.now()))+expires)
-        download_url += "&token="+token
+        download_url += '?e=' + \
+            str(int(datetime.timestamp(datetime.now())) + expires)
+        download_url += "&token=" + token
         return download_url
 
-    def private_url(self,key,host,expires=3600):
+    def private_url(self, key, host, expires=3600):
         r"""
-            generate one private url 	
+            generate one private url
             @Args:
                 key:resource key,'str' type,
                 expires:'int' type,units:'s',
@@ -53,14 +54,14 @@ class QiniuResourceLoader(object):
         return self._gen_private_url(key, expires, host)
 
     @gen.coroutine
-    def single_upload(self, key, filename, bucket, host = "upload.qiniu.com", accept = "json"):
-        upload_token = self._auth.upload_token(bucket,key)
+    def single_upload(self, key, filename, bucket, host="upload.qiniu.com", accept="json"):
+        upload_token = self._auth.upload_token(bucket, key)
         fields = {}
         if key:
             fields['key'] = key
         fields['token'] = upload_token
-        #fields['crc32']='1'
-        fields['accept'] = 'application/'+accept
+        # fields['crc32']='1'
+        fields['accept'] = 'application/' + accept
         files = {}
         files['file'] = filename
         content_type, body = multipart_formdata(fields, files)
@@ -72,41 +73,41 @@ class QiniuResourceLoader(object):
         return response
 
     @gen.coroutine
-    def shard_upload(self, key, filename, bucket, host = "upload.qiniu.com"):
-        #upload token
+    def shard_upload(self, key, filename, bucket, host="upload.qiniu.com"):
+        # upload token
         upload_token = self._auth.upload_token(bucket, key)
-        #file size
+        # file size
         file_size = os.path.getsize(filename)
-        #uploding block info tmp file 
+        # uploding block info tmp file
         path, name = os.path.split(filename)
         name = '.' + name.split('.')[0] + '_' + str(os.path.getmtime(filename))
         tmp_file = path + name
         # default upload block size,unit: byte
-        BLOCK_SIZE = 4194304#4MB
-        # each block uploading begin index 
+        BLOCK_SIZE = 4194304  # 4MB
+        # each block uploading begin index
         start_block_id = 0
         # block number of each uploading
         ep_block_num = 3
         # last ctx information list of all block
         ctxlist = []
         # total block number of file
-        total_block_num = (file_size//BLOCK_SIZE)
-        if (file_size%BLOCK_SIZE)>0:
+        total_block_num = (file_size // BLOCK_SIZE)
+        if (file_size % BLOCK_SIZE) > 0:
             total_block_num += 1
-        #check uploading tmp file existen,if exists, 
-        #reupload failed blocks according to tmp file
+        # check uploading tmp file existen,if exists,
+        # reupload failed blocks according to tmp file
         if os.path.exists(tmp_file):
 		""
-        with ThreadPoolExecutor(max_workers = 4) as executor:
+        with ThreadPoolExecutor(max_workers=4) as executor:
 			with open(filename, 'r+b') as f:
 				while True:
 					blocks = []
 					print("one time")
 					if total_block_num <= 0:
-						break	
+						break
 					if 0 < total_block_num < ep_block_num:
 						ep_block_num = total_block_num
-					for bid in range(start_block_id, start_block_id+ep_block_num):
+					for bid in range(start_block_id, start_block_id + ep_block_num):
 						block_data = f.read(BLOCK_SIZE)
 						block_size = len(block_data)
 						blocks.append({
@@ -115,9 +116,10 @@ class QiniuResourceLoader(object):
 							'bdata': block_data,
 							'failed_handler': self.__blk_upload_failed_handler(f, bid, block_size)
 						})
-					#update block start id 
+					# update block start id
 					start_block_id += ep_block_num
-					upload_coroutines = [self._block_upload(executor, block, upload_token, host) for block in blocks]
+					upload_coroutines = [self._block_upload(
+					    executor, block, upload_token, host) for block in blocks]
 					responses = yield upload_coroutines
 					for response in responses:
 						if not response:
@@ -125,7 +127,7 @@ class QiniuResourceLoader(object):
 						ctxlist.append(response.get('ctx'))
 					blocks = []
 					total_block_num -= ep_block_num
-		#merge all block info origin  file
+		# merge all block info origin  file
 		print(ctxlist)
 		response = yield self._mkfile(key, filesize, ctxlist, upload_token, host)			
 		return response
@@ -148,11 +150,11 @@ class QiniuResourceLoader(object):
     def _block_upload(self,executor,block,upload_token,host):
         # chunk size ,default if 256 KB
         CHUNK_SIZE = 262144# 256KB
-        #max times of making block and uploading chunk
+        # max times of making block and uploading chunk
         MAX_TIMES = 3
-        #block size
+        # block size
         bsize = block.get('bsize')
-        #block data
+        # block data
         bdata = block.get('bdata')
         # start offset in chunk for each bput
         start_point = 0
@@ -187,7 +189,7 @@ class QiniuResourceLoader(object):
                 # make block successfully,update start_point and end_point
                 start_point = end_point
                 end_point += CHUNK_SIZE
-                #end loop
+                # end loop
 		mkblk_flag = False
         # upload leave chunk
         while start_point < bsize:
@@ -308,8 +310,8 @@ class QiniuResourceLoader(object):
 ################################################################################
 #
 #
-#Qiniu Resource manager that's responsible for bucket resouce management ,
-#like 'delete','copy','move' and so on
+# Qiniu Resource manager that's responsible for bucket resouce management ,
+# like 'delete','copy','move' and so on
 #
 #
 #
@@ -378,8 +380,8 @@ class QiniuResourceManager(object):
 ################################################################################
 #
 #
-#Qiniu resource processor that's responsible for bucket resource procession 
-#like 'imageView2','QRCode','Audio/Vedio thumb'
+# Qiniu resource processor that's responsible for bucket resource procession 
+# like 'imageView2','QRCode','Audio/Vedio thumb'
 #		
 #################################################################################
 	
@@ -776,7 +778,7 @@ class Batch(object):
 ################################################################################
 #
 #
-#Qiniu bucket resource map class
+# Qiniu bucket resource map class
 #
 #
 #
@@ -813,10 +815,10 @@ class Resource(object):
 		urls=[]
 		if len(self._vpipe.get("url_path"))>0:
 				path=''.join(self._vpipe.get("url_path"))
-		#check last called method whether output a fops
+		# check last called method whether output a fops
 		if len(self._vpipe.get("fops"))>0:
 				query_string+="|".join(self._vpipe.get("fops"))					
-		#check last called method whether output a query_string
+		# check last called method whether output a query_string
 		if len(self._vpipe.get("query_string"))>0:
 				if query_string:
 					query_string+='&'+'&'.join(self._vpipe.get("query_string"))

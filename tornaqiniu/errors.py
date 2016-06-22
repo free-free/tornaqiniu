@@ -1,8 +1,13 @@
 #-*- coding:utf-8 -*-
 
+
 class EncodingError(Exception):
-	pass
+    pass
+
+
 class PolicyKeyError(KeyError):
-	pass
+    pass
+
+
 class PolicyValueTypeError(TypeError):
-	pass
+    pass
