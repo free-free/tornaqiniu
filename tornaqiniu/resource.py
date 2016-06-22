@@ -1,7 +1,11 @@
 #-*- coding:utf-8 -*-
+
+import logging
+logging.basicConfig(level=logging.ERROR)
 from tornado import gen,httpclient
 from tornado.concurrent import Future
 from concurrent.futures import ThreadPoolExecutor
+import threading 
 import hmac
 import hashlib
 import base64
@@ -13,6 +17,7 @@ from . import PUT_POLICY
 from .common import Auth
 from .interface import QiniuInterface
 import os
+
 ##################################################################
 #
 # Qiniu Resource Loader that's responsible for uploading resource to
@@ -21,120 +26,201 @@ import os
 #
 #################################################################
 
+
 class QiniuResourceLoader(object):
-	def __init__(self,auth):
-		self._auth=auth
-	def _gen_private_url(self,key,host,expires=3600):
-		assert host!=None and host!="","download host can' be empty"
-		if not host.startswith("http://"):
-			host="http://"+host
-		download_url=host+'/'+key
-		token=self._auth.download_token(download_url,expires=expires)
-		download_url+='?e='+str(int(datetime.timestamp(datetime.now()))+expires)
-		download_url+="&token="+token
-		return download_url
-	def private_url(self,key,host,expires=3600):
-		r"""
-			generate one private url 
-			
-			@parameters:
-				key:resource key,'str' type,
-				expires:'int' type,units:'s',
-				host:resource host name
-		"""
-		return self._gen_private_url(key,expires,host)
-	@gen.coroutine
-	def single_upload(self,key,filename,bucket,host="upload.qiniu.com",accept="json"):
-		upload_token=self._auth.upload_token(bucket,key)
-		fields={}
-		if key:
-			fields['key']=key
-		fields['token']=upload_token
-		#fields['crc32']='1'
-		fields['accept']='application/'+accept
-		files={}
-		files['file']=filename
-		content_type,body=multipart_formdata(fields,files)
-		headers={}
-		headers['Content-Type']=content_type
-		headers['Content-Length']=str(len(body))
-		headers['Host']=host
-		response=yield send_async_request("http://"+host+'/',headers=headers,method="POST",body=body)
-		return response
-	@gen.coroutine
-	def shard_upload(self,key,filename,bucket,host="upload.qiniu.com"):
-		#upload token
-		upload_token=self._auth.upload_token(bucket,key)
-		#file size
-		filesize=os.path.getsize(filename)
-		# default upload block size,unit: byte
-		BLOCK_SIZE=4194304#4MB
-		# total block number of file
-		total_block_num=(filesize//BLOCK_SIZE)
-		if (filesize%BLOCK_SIZE)>0:
-			total_block_num+=1
-		# each block uploading begin index 
-		start_block_id=0
-		# block number of each uploading
-		e_block_num=3
-		# last ctx information list of all block
-		ctxlist=[]
-		executor=ThreadPoolExecutor(max_workers=4)
-		with ThreadPoolExecutor(max_workers=4) as executor:
-			with open(filename,'r+b') as f:
+
+    def __init__(self,auth):
+        self._auth=auth
+
+    def _gen_private_url(self,key,host,expires=3600):
+        assert host != None and host != "","download host can' be empty"
+        if not host.startswith("http://"):
+            host = "http://" + host
+        download_url = host + '/' + key
+        token = self._auth.download_token(download_url, expires=expires)
+        download_url += '?e='+str(int(datetime.timestamp(datetime.now()))+expires)
+        download_url += "&token="+token
+        return download_url
+
+    def private_url(self,key,host,expires=3600):
+        r"""
+            generate one private url 	
+            @Args:
+                key:resource key,'str' type,
+                expires:'int' type,units:'s',
+                host:resource host name
+         """
+        return self._gen_private_url(key, expires, host)
+
+    @gen.coroutine
+    def single_upload(self, key, filename, bucket, host = "upload.qiniu.com", accept = "json"):
+        upload_token = self._auth.upload_token(bucket,key)
+        fields = {}
+        if key:
+            fields['key'] = key
+        fields['token'] = upload_token
+        #fields['crc32']='1'
+        fields['accept'] = 'application/'+accept
+        files = {}
+        files['file'] = filename
+        content_type, body = multipart_formdata(fields, files)
+        headers = {}
+        headers['Content-Type'] = content_type
+        headers['Content-Length'] = str(len(body))
+        headers['Host'] = host
+        response = yield send_async_request("http://" + host + '/', headers=headers, method="POST", body=body)
+        return response
+
+    @gen.coroutine
+    def shard_upload(self, key, filename, bucket, host = "upload.qiniu.com"):
+        #upload token
+        upload_token = self._auth.upload_token(bucket, key)
+        #file size
+        file_size = os.path.getsize(filename)
+        #uploding block info tmp file 
+        path, name = os.path.split(filename)
+        name = '.' + name.split('.')[0] + '_' + str(os.path.getmtime(filename))
+        tmp_file = path + name
+        # default upload block size,unit: byte
+        BLOCK_SIZE = 4194304#4MB
+        # each block uploading begin index 
+        start_block_id = 0
+        # block number of each uploading
+        ep_block_num = 3
+        # last ctx information list of all block
+        ctxlist = []
+        # total block number of file
+        total_block_num = (file_size//BLOCK_SIZE)
+        if (file_size%BLOCK_SIZE)>0:
+            total_block_num += 1
+        #check uploading tmp file existen,if exists, 
+        #reupload failed blocks according to tmp file
+        if os.path.exists(tmp_file):
+		""
+        with ThreadPoolExecutor(max_workers = 4) as executor:
+			with open(filename, 'r+b') as f:
 				while True:
-					blocks=[]
+					blocks = []
 					print("one time")
-					if total_block_num<=0:
+					if total_block_num <= 0:
 						break	
-					if 0<total_block_num<e_block_num:
-						e_block_num=total_block_num
-					for bid in range(start_block_id,start_block_id+e_block_num):
-						block_data=f.read(BLOCK_SIZE)
-						blocks.append({'block':block_data,'rbsize':len(block_data)})
+					if 0 < total_block_num < ep_block_num:
+						ep_block_num = total_block_num
+					for bid in range(start_block_id, start_block_id+ep_block_num):
+						block_data = f.read(BLOCK_SIZE)
+						block_size = len(block_data)
+						blocks.append({
+							'bsize': block_size,
+							'bid': bid,
+							'bdata': block_data,
+							'failed_handler': self.__blk_upload_failed_handler(f, bid, block_size)
+						})
 					#update block start id 
-					start_block_id+=e_block_num
-					upload_coroutines=[self._block_upload(executor,block['block'],upload_token,host,block['rbsize']) for block in blocks]
-					responses=yield upload_coroutines
+					start_block_id += ep_block_num
+					upload_coroutines = [self._block_upload(executor, block, upload_token, host) for block in blocks]
+					responses = yield upload_coroutines
 					for response in responses:
+						if not response:
+						    continue
 						ctxlist.append(response.get('ctx'))
-					blocks=[]
-					total_block_num-=e_block_num
+					blocks = []
+					total_block_num -= ep_block_num
 		#merge all block info origin  file
 		print(ctxlist)
-		response=yield self._mkfile(key,filesize,ctxlist,upload_token,host)			
-		return response				
-	@gen.coroutine
-	def _block_upload(self,executor,block,upload_token,host,block_size=4194304):
-		start_point=0
-		CHUNK_SIZE=262144# 256KB
-		end_point=CHUNK_SIZE
-		if (block_size-start_point)<CHUNK_SIZE:
-			end_point=block_size
-		chunk=block[start_point:end_point]
-		start_point=end_point
-		end_point+=CHUNK_SIZE
-		future=executor.submit(self._mkblock,chunk,upload_token,host,block_size)
-		response=yield future
-		while start_point<block_size:
-			if (block_size-start_point)<CHUNK_SIZE:
-				end_point=block_size
-			chunk=block[start_point:end_point]
-			start_point=end_point
-			end_point+=CHUNK_SIZE
-			future=executor.submit(self._bput,chunk,response['ctx'],response['offset'],upload_token,host)
-			response=yield future
+		response = yield self._mkfile(key, filesize, ctxlist, upload_token, host)			
 		return response
-	def _mkblock(self,first_chunk,upload_token,host,block_size=4194304):
-		headers={}
-		headers['Host']=host
-		headers['Content-Type']='application/octet-stream'
-		headers['Content-Length']=len(first_chunk)
-		headers['Authorization']='UpToken '+upload_token
-		response=send_sync_request("http://"+host+"/mkblk/"+str(block_size),method="POST",headers=headers,body=first_chunk)
-		if response:
-			return json_decode(bytes_decode(response.body))
-	def _bput(self,chunk,ctx,offset,upload_token,host):
+
+    def __blk_upload_failed_handler(self, file_obj, bid, bsize):
+        r'''
+            when block uploading failed ,return a handler to store failed block's information	
+        '''
+        def handler():
+            r"""
+                 [{"bid":bid},{},...]
+            """
+            with  threading.Lock():
+                failed_blocks=json.load(fileobj)
+                failed_blocks.append({"bid":bid,'bsize':bsize})
+                json.dump(fileobj,failed_blocks)
+        return handler
+
+    @gen.coroutine
+    def _block_upload(self,executor,block,upload_token,host):
+        # chunk size ,default if 256 KB
+        CHUNK_SIZE = 262144# 256KB
+        #max times of making block and uploading chunk
+        MAX_TIMES = 3
+        #block size
+        bsize = block.get('bsize')
+        #block data
+        bdata = block.get('bdata')
+        # start offset in chunk for each bput
+        start_point = 0
+        # end offset in chunk for each bput
+        end_point = CHUNK_SIZE
+        # make block error counter
+        mkblk_error_cnt = 0
+        # upload chunk error coutner
+        bput_error_cnt = 0
+        # make block flag
+        mkblk_flag = True
+        # block size smaller than single chunk size,set end_point's value equal to block size
+        if (bsize - start_point) < CHUNK_SIZE:
+            end_point = bsize
+        # slice first chunk 
+        chunk = bdata[start_point:end_point]
+        # make a block and upload first chunk 
+        while mkblk_flag:
+            future = executor.submit(self._mkblock, chunk, upload_token, host, bsize)
+            try:
+                response = yield future
+            except Exception as e:
+                mkblk_error_cnt + =1
+                # if block uploading failed,raise BlockUploadError exception
+                if mkblk_error_cnt > MAX_TIMES:
+                     logging.error("Making Block {0} Failed!".format(block.get('bid')))
+                     handler = block.get('failed_handler')
+                     handler()
+                     return None
+                logging.error("Making Block {0} Error {1} ,remake block !".format(block.get("bid"),e))
+            else:
+                # make block successfully,update start_point and end_point
+                start_point = end_point
+                end_point += CHUNK_SIZE
+                #end loop
+		mkblk_flag = False
+        # upload leave chunk
+        while start_point < bsize:
+            if (bsize - start_point) < CHUNK_SIZE:
+                end_point = bsize
+            chunk = bdata[start_point:end_point]
+            future = executor.submit(self._bput, chunk, response['ctx'], response['offset'], upload_token, host)
+            try:
+                response = yield future
+            except Exception as e:
+                bput_error_cnt += 1
+                if bput_error_cnt > MAX_TIMES:
+                    logging.error("Uploading Block {0} Failed!".format(block.get('bid')))
+                    handler = block.get("failed_handler")
+                    handler()
+                    return None
+                logging.error("Uploading Chunk Of The Block {0} Error: {1} , reupload chunk !".format(block.get("bid"),e))
+            else:
+                start_point += end_size
+		end_point += CHUNK_SIZE
+         return response
+
+    def _mkblock(self, first_chunk, upload_token, host, block_size=4194304):
+        headers = {}
+        headers['Host'] = host
+        headers['Content-Type'] = 'application/octet-stream'
+        headers['Content-Length'] = len(first_chunk)
+        headers['Authorization'] = 'UpToken ' + upload_token
+        response = send_sync_request("http://" + host + "/mkblk/" + str(block_size), method = "POST", headers = headers, body = first_chunk)
+        if response:
+            return json_decode(bytes_decode(response.body))
+
+    def _bput(self,chunk,ctx,offset,upload_token,host):
 		headers={}
 		headers['Host']=host
 		headers['Content-Type']='application/octet-stream'
@@ -143,8 +229,9 @@ class QiniuResourceLoader(object):
 		response=send_sync_request("http://"+host+"/bput/"+str(ctx)+'/'+str(offset),method="POST",headers=headers,body=chunk)
 		if response:
 			return json_decode(bytes_decode(response.body))
-	@gen.coroutine
-	def _mkfile(self,key,filesize,ctxlist,upload_token,host):
+
+    @gen.coroutine
+    def _mkfile(self,key,filesize,ctxlist,upload_token,host):
 		ctx=','.join(ctxlist)
 		headers={}
 		headers['Host']=host
@@ -158,7 +245,8 @@ class QiniuResourceLoader(object):
 		response=yield send_async_request(url,method="POST",headers=headers,body=ctx)
 		if response:
 			return json_decode(bytes_decode(response.body))
-	def private_urls(self,keys,host,expires=3600,key_name=None):
+
+    def private_urls(self,keys,host,expires=3600,key_name=None):
 		"""
 			generate multi private urls at the same time
 		
@@ -181,13 +269,15 @@ class QiniuResourceLoader(object):
 		else:
 			pass
 		return download_urls
-	def _gen_public_url(self,key,host):
+
+    def _gen_public_url(self,key,host):
 		assert host!=None and host!=""," host can't be empty"
 		if not host.startswith("http://"):
 			host="http://"+host
 		download_url=host+'/'+key
 		return download_url
-	def public_url(self,key,host):
+
+    def public_url(self,key,host):
 		r"""
 			generate public url 
 			
@@ -196,7 +286,8 @@ class QiniuResourceLoader(object):
 				host:resource host name
 		"""
 		return self._gen_public_url(key,host)
-	def public_urls(self,keys,host,key_name=None):
+
+    def public_urls(self,keys,host,key_name=None):
 		r"""
 			generate multi public url
 			the parameters difinition is same with 'private_urls'
