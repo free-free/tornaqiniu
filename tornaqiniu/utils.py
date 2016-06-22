@@ -77,10 +77,13 @@ def send_sync_request(url,headers=None,method="GET",body=None):
 		return response
 	except httpclient.HTTPError as e:
 		print("Error:"+str(e))
+		raise httpclient.HTTPError()
 	except Exception as e:
 		print("Error:"+str(e))
+		raise Exception
 	finally:
 		http_client.close()
+
 
 def  mkdir_recursive(dirname,level=1):
 	if level==1:
