@@ -1,9 +1,20 @@
 # qiniu cloud storage sdk for tornado
 
-------------
+
+## Installation
+
+```bash
+$ python3.x setup.py install
+```
+
+## Environment
+
+| tornaqiniu Version | Python Version |
+|:------------------:|:---------------|
+|     1.0            |   3.4,3.5      |
 
 
-### Get Started:
+## Quick Start
 
 #### 1.Resource Upload and Download
 ```python
