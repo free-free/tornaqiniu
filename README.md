@@ -1,5 +1,6 @@
 # qiniu cloud storage sdk for tornado
 
+![Software License](https://img.shields.io/github/license/mashape/apistatus.svg)
 
 ## Installation
 
