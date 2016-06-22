@@ -1,10 +1,10 @@
-## Description
-	tornaqiniu is a qiniu cloud storage client for tornado
+# qiniu cloud storage sdk for tornado
+
 
 ## Get Started:
 ### 1.Resource Upload and Download
 ```python
-from tornado imoprt gen,ioloop
+from tornado import gen,ioloop
 from tornaqiniu import QiniuClient
 
 access_key="your qiniu access key"
@@ -30,7 +30,7 @@ def get_resource():
 	response=yield bucket.res("resource_key").get()#return download file saved name
 
 	# get multi resource 
-	response=yield bucket.res('key1','key2').get()#return resource saved fiel name
+	response=yield bucket.res('key1','key2').get()#return resource saved file name
 	
 loop=ioloop.IOLoop.current()
 loop.run_sync(get_resource)
