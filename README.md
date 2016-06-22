@@ -1,8 +1,11 @@
 # qiniu cloud storage sdk for tornado
 
+------------
 
-## Get Started:
-### 1.Resource Upload and Download
+
+### Get Started:
+
+#### 1.Resource Upload and Download
 ```python
 from tornado import gen,ioloop
 from tornaqiniu import QiniuClient
@@ -47,7 +50,7 @@ def upload():
 loop.run_sync(upload)
 loop.close()
 ```
-### 2.Resource Management
+#### 2.Resource Management
 ```python
 
 from tornado import gen,ioloop
@@ -119,7 +122,7 @@ def bacth_ops():
 	#execute batch ,return json format data
 	yield bacth.execute()
 ```
-## Updating
+### Updating
 	..............
   
 
