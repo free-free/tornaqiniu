@@ -1,4 +1,4 @@
-# qiniu cloud storage asynchronous sdk base on tornado
+# qiniu storage asynchronous sdk for tornado
 
 [![Software License](https://img.shields.io/github/license/mashape/apistatus.svg)](LICENSE)
 
