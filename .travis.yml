@@ -15,5 +15,4 @@ before_script:
 - PYTHONPATH="$PYTHONPATH:."
 script:
 - flask8 --show-source --show-pep8 --max-line-length=160
-- python -m tornado.testing tornaqiniu.tests
-	
+- python -m tornaqiniu.tests.runtests
