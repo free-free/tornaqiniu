@@ -31,7 +31,7 @@ bucket_acp = 0   #bucket access property,1 ===>private bucket,0===>public bucket
 
 
 client = QiniuClient(access_key, secret_key, domain)
-loop = ioloop.IOLoop.current()]
+loop = ioloop.IOLoop.current()
 
 #get a bucket instance
 bucket = client.bucket(bucket_name, bucket_acp=1)
