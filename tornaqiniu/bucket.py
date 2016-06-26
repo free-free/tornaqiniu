@@ -30,24 +30,53 @@ class Bucket(object):
 
     @property
     def acp(self):
+        r"""
+            Args:
+                None
+            Returns:
+                bucket access property
+        """
         return self.__bucket_acp
 
     @property
     def bucket_name(self):
+        r"""
+            Args:
+                None
+            Returns:
+                bucket name
+        """
         return self.__bucket_name
 
     @property
     def auth(self):
+        r"""
+            Args:
+                None
+            Returns:
+                Auth object
+        """
         return self.__auth
 
-    @property
-    def resources(self):
-        return self.__resources
-
     def res(self, *res_key):
+        r"""
+            Args:
+                res_key : resource key
+            Returns:
+                Resource Map object
+        """
         return Resource(self, *res_key)
 
     def upload_token(self, key=None, bucket=None, expires=3600, policys=None):
+        r"""
+            Args: 
+                key : resource key 
+                bucket : resource bucket name
+                expires : expire time,unit second
+                policys : upload policy ,dict type or Policy type
+            Returns:
+                upload_token
+        """
         bucket = bucket or self.__bucket_name
         assert bucket != None and bucket != "", "invalid bucket"
         if isinstance(policys, Policy):
@@ -72,14 +101,23 @@ class Bucket(object):
     def public_url(self, key, host=None):
         """
         Args:
-                key:resource key name
+            key:resource key name
         Returns:
-                resource public url
+            resource public url
         """
         return self.__res_loader.public_url(key, host or self.__host)
 
     @gen.coroutine
     def put(self, key, filename, host="upload.qiniu.com", accept="json"):
+        r"""
+        Args:
+            key : resource key name
+            filename : upload file name
+            host : upload host name
+            accept : response type (json/xml)
+        Returns:
+            resource hash value and resource key name
+        """
         filesize = os.path.getsize(filename)
         # when file size greater than 4 MB,using shard uploading
         if filesize > 4194304:
@@ -117,7 +155,7 @@ class Bucket(object):
                 d_bucket:destination bucket name
                 d_key:destination key name
         Returns:
-
+            None
         """
         response = yield self.__res_manager.move(s_key, s_bucket, d_key, d_bucket)
         return response
@@ -182,13 +220,125 @@ class Bucket(object):
 
     @gen.coroutine
     def prefetch(self, key, bucket=None):
+        r"""
+            Args:
+                key : resource key
+                bucket : bucket name
+            Returns:
+                json type
+        """
         response = yield self.__res_manager.prefetch(key, bucket or self._bucket)
         return response
 
     @gen.coroutine
     def prefop(self, persistent_id):
+        r"""
+            Args:
+                persistent_id : persistent_id
+            Returns:
+                json 
+        """
         response = yield self.__res_processor.prefop(presistent_id)
         return response
 
     def persistent(self, key, notify_url, fops=None, force=1, pipeline=None):
+        r"""
+            Args:
+                key : resource key
+                notify_url : callback url after procession done
+                fops : operations 
+                force : 1 or 9
+                pipeline : process pipeline
+            Returns:
+                _PersistentWrapper object that defined in _PersistentWrapper
+         """
         return self.__res_processor.persistent(key, notify_url, self.__bucket_name, fops, force, pipeline)
+    def image_views(self, url, mode, width=None, height=None, **kwargs):
+        r"""
+            Args:
+                url : resource url
+                mode : imageView2 mode 
+                width : image width
+                height : image height
+                kwargs : other args for imageView2 interface 
+                the details refer to:http://developer.qiniu.com/code/v6/api/kodo-api/image/imageview2.html
+            Returns:
+                resource imageview2 url
+        """
+        return self.__res_processor.image_view2(url,
+                                                mode,
+                                                width,
+                                                height,
+                                                **kwargs
+                                                )
+    def image_watermark(self, origin_url, water_img_url, **kwargs):
+        r"""
+            Args:
+                origin_url : image url that need to watermark
+                water_img_url : water image url
+                kwargs : other optional args for image_watermark interface
+                the details refer to :
+                http://developer.qiniu.com/code/v6/api/kodo-api/image/watermark.html
+           Returns:
+                resource image watermark url
+        """
+        return self.__res_processor.image_watermark(origin_url,
+                                                   water_img_url,
+                                                   **kwargs
+                                                   )
+    def text_watermark(self, origin_url, text, **kwargs):
+        r"""
+            Args:
+                origin_url : image url that need to watermark
+                text : text for watermark
+                kwargs : optional args for text_watermark interface
+                the details refer to :
+                http://developer.qiniu.com/code/v6/api/kodo-api/image/watermark.html
+            Returns:
+                 retource text watermark url
+        """
+         return self.__res_processor.text_watermark(origin_url,
+                                                    text,
+                                                    **kwargs
+                                                   )
+    @gen.coroutine
+    def imageinfo(self, origin_url):
+        r"""
+           Args:
+               origin_url : image url
+           Returns:
+                json type for image  information 
+        """
+        response = yield self.__res_processor.get_imageinfo(origin_url)
+        return response
+    @gen.coroutine
+    def imageexif(self, origin_url):
+        r"""
+            Args:
+                origin_url : image url
+            Returns:
+                json type for image exif 
+         """
+         response = yield self.__res_processor.get_imageexif(origin_url)
+         return response
+     @gen.coroutine
+     def imageave(self, origin_url):
+         r"""
+             Args: 
+                 origin_url : image url
+             Returns:
+                  string type for image ave
+         """
+         response = yield self.__res_processor.get_imageave(origin_url)
+         return response
+     @gen.coroutine
+     def avinfo(self, av_url):
+         r"""
+              Args:
+                  av_url : audio/vedio url
+              Returns:
+                  json type for audio/vedio information
+         """
+         response = yield self.__res_processor.get_avinfo(av_url)
+         return response
+      
