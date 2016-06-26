@@ -1013,7 +1013,7 @@ class Resource(object):
 		if response:
 			return json_decode(response)
 	@gen.coroutine
-	def prefecth(self):
+	def prefetch(self):
 		response=yield self.__bucket.prefetch(self.__key, self.__bucket.bucket_name)
 		if response:
 			return json_decode(response)
