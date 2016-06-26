@@ -1,11 +1,9 @@
-#-*- coding:utf-8 -*-
-import functools
+# -*- coding:utf-8 -*-
 from tornado import gen
 import os
 from .common import Policy
 from .resource import Resource, QiniuResourceLoader, QiniuResourceManager, QiniuResourceProcessor
-from .interface import QiniuInterface
-from .utils import *
+from .utils import json_decode,json_encode,bytes_decode,bytes_encode,urlsafe_base64_encode
 
 
 class Bucket(object):
@@ -121,12 +119,12 @@ class Bucket(object):
         filesize = os.path.getsize(filename)
         # when file size greater than 4 MB,using shard uploading
         if filesize > 4194304:
-            print('shading upload')
-            response = yield self.__res_loader.shard_upload(key, filename, self.bucket_name, host)
+            response = yield self.__res_loader.shard_upload(key,\
+                filename, self.bucket_name, host)
             return response
         else:
-            print('single upload')
-            response = yield self.__res_loader.single_upload(key, filename, self.bucket_name, host, accept)
+            response = yield self.__res_loader.single_upload(key,\
+                filename, self.bucket_name, host, accept)
             if accept.lower() == 'json':
                 if response:
                     return json_decode(bytes_decode(response.body))
@@ -139,7 +137,8 @@ class Bucket(object):
         """get resource detail information
         Args:
                 key:resource key
-                bucket:bucket name,if bucket name is None,self._bucket will replace it
+                bucket:bucket name,if bucket name is None,
+                       self._bucket will replace it
         Returns:
                 a dict for resource information
         """
@@ -238,7 +237,7 @@ class Bucket(object):
             Returns:
                 json 
         """
-        response = yield self.__res_processor.prefop(presistent_id)
+        response = yield self.__res_processor.prefop(persistent_id)
         return response
 
     def persistent(self, key, notify_url, fops=None, force=1, pipeline=None):
@@ -253,6 +252,7 @@ class Bucket(object):
                 _PersistentWrapper object that defined in _PersistentWrapper
          """
         return self.__res_processor.persistent(key, notify_url, self.__bucket_name, fops, force, pipeline)
+
     def image_views(self, url, mode, width=None, height=None, **kwargs):
         r"""
             Args:
@@ -271,6 +271,7 @@ class Bucket(object):
                                                 height,
                                                 **kwargs
                                                 )
+
     def image_watermark(self, origin_url, water_img_url, **kwargs):
         r"""
             Args:
@@ -283,9 +284,10 @@ class Bucket(object):
                 resource image watermark url
         """
         return self.__res_processor.image_watermark(origin_url,
-                                                   water_img_url,
-                                                   **kwargs
-                                                   )
+                                                    water_img_url,
+                                                    **kwargs
+                                                    )
+
     def text_watermark(self, origin_url, text, **kwargs):
         r"""
             Args:
@@ -298,9 +300,10 @@ class Bucket(object):
                  retource text watermark url
         """
         return self.__res_processor.text_watermark(origin_url,
-                                                    text,
-                                                    **kwargs
+                                                   text,
+                                                   **kwargs
                                                    )
+
     @gen.coroutine
     def imageinfo(self, origin_url):
         r"""
@@ -311,6 +314,7 @@ class Bucket(object):
         """
         response = yield self.__res_processor.get_imageinfo(origin_url)
         return response
+
     @gen.coroutine
     def imageexif(self, origin_url):
         r"""
@@ -321,6 +325,7 @@ class Bucket(object):
         """
         response = yield self.__res_processor.get_imageexif(origin_url)
         return response
+
     @gen.coroutine
     def imageave(self, origin_url):
         r"""
@@ -331,6 +336,7 @@ class Bucket(object):
         """
         response = yield self.__res_processor.get_imageave(origin_url)
         return response
+
     @gen.coroutine
     def avinfo(self, av_url):
         r"""
@@ -341,4 +347,3 @@ class Bucket(object):
         """
         response = yield self.__res_processor.get_avinfo(av_url)
         return response
-      
