@@ -297,7 +297,7 @@ class Bucket(object):
             Returns:
                  retource text watermark url
         """
-         return self.__res_processor.text_watermark(origin_url,
+        return self.__res_processor.text_watermark(origin_url,
                                                     text,
                                                     **kwargs
                                                    )
@@ -318,27 +318,27 @@ class Bucket(object):
                 origin_url : image url
             Returns:
                 json type for image exif 
-         """
-         response = yield self.__res_processor.get_imageexif(origin_url)
-         return response
-     @gen.coroutine
-     def imageave(self, origin_url):
-         r"""
-             Args: 
-                 origin_url : image url
+        """
+        response = yield self.__res_processor.get_imageexif(origin_url)
+        return response
+    @gen.coroutine
+    def imageave(self, origin_url):
+        r"""
+            Args: 
+                origin_url : image url
+            Returns:
+                 string type for image ave
+        """
+        response = yield self.__res_processor.get_imageave(origin_url)
+        return response
+    @gen.coroutine
+    def avinfo(self, av_url):
+        r"""
+             Args:
+                 av_url : audio/vedio url
              Returns:
-                  string type for image ave
-         """
-         response = yield self.__res_processor.get_imageave(origin_url)
-         return response
-     @gen.coroutine
-     def avinfo(self, av_url):
-         r"""
-              Args:
-                  av_url : audio/vedio url
-              Returns:
-                  json type for audio/vedio information
-         """
-         response = yield self.__res_processor.get_avinfo(av_url)
-         return response
+                 json type for audio/vedio information
+        """
+        response = yield self.__res_processor.get_avinfo(av_url)
+        return response
       
