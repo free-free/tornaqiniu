@@ -15,5 +15,5 @@ before_script:
 - PYTHONPATH="$PYTHONPATH:."
 - export PYTHONPATH
 script:
-- flask8 --show-source --show-pep8 --max-line-length=160
+- flake8 --show-source --show-pep8 --max-line-length=160
 - python -m tornaqiniu.tests.runtests
