@@ -61,7 +61,8 @@ def upload():
 loop.run_sync(upload)
 loop.close()
 ```
-#### 2.Resource Management
+
+#### 2. Resource Management
 ```python
 
 from tornado import gen,ioloop
@@ -134,7 +135,90 @@ def batch_ops():
 loop.run_sync(batch_ops)
 
 ```
-### Updating
-	..............
-  
 
+#### 3. Resource Process
+```python
+
+
+from tornado import gen,ioloop
+from tornaqiniu import QiniuClient
+
+access_key = "your qiniu access key"
+secret_key = "your qiniu secret key"
+bucket_name = "your bucket name"
+domain="your domain"
+bucket_acp = 0   #bucket access property,1 ===>private bucket,0===>public bucket
+
+client = QiniuClient(access_key,secret_key,domain)
+bucket = client.bucket(bucket_name,bucket_acp=bucket_acp)
+loop = ioloop.IOLoop.current()
+
+# get resource info
+@gen.coroutine
+def get_info():
+    
+    # get image info
+    imginfo = yield bucket.res("dummy_img_key").imageinfo().get()
+    
+    # get image ave
+    imgave = yield bucket.res("dummy_img_key").imageave().get()
+    
+    # get image exif
+    imgexif = yield bucket.res("dummy_img_key").imageexif().get()
+    
+loop.run_sync(get_info)
+
+# resource fops
+@gen.coroutine
+def resource_fops():
+    
+    # resource qrcode url
+    qrcodeurl = bucket.res("dummy_img_key").fops().qrcode().url()
+    
+    # get resource qrcode img
+    qrcodeimg = yield bucket.res("dummy_img_key").fops().qrcode().get()
+
+    # resource text_watermark
+    text_watermark_url = bucket.res("dummy_img_key").fops().text_watermark("dummy").url()
+    text_watermark_img = yield bucket.res("dummy_img_key").fops().text_watermark("dummy").get()
+
+    # resource image watermark
+    img_url = bucket.res("water_img").url()
+    watered_img_url = bucket.res("dummy_img_key").fops().image_watermark(img_url).url()
+    waterd_img = yield bucket.res("dummy_img_key").fops().image_watermark(img_url).get()
+    
+    # resource fops saveas
+    saveas_url = bucket.res("dummy_key").fops().text_watermark("dummy").saveas("dummy_watermark").url()
+    yield bucket.res("dummy_key").fops().text_watermark("dummy").saveas("dummy_watermark").get()
+
+    # resource fops persistent
+   
+    # audio/vedio slice operation, the detail args refer to:
+    # http://developer.qiniu.com/code/v6/api/dora-api/av/segtime.html
+
+    yield bucket.res("dummy_av").fops().avthumb_slice(no_domain=1).persistent()
+    
+    # audio/vedio transcoding operation,the detail args refer to:
+    # http://developer.qiniu.com/code/v6/api/dora-api/av/avthumb.html
+    yield bucket.res("dummy_av").fops().avthumb_transcoding("mp3").persistent()
+   
+    # audio/vedio concat operation,the detail args refer to :
+    # http://developer.qiniu.com/code/v6/api/dora-api/av/avconcat.html
+    yield bucket.res("dummy_av").fops().avconcat(mode=2, frmt="mp4", url1="http://**",url2="http://**").persistent()
+    
+    # audio/vedio vframe operation ,the detail args refer to:
+    # http://developer.qiniu.com/code/v6/api/dora-api/av/vframe.html
+    yield bucket.res("dummy_av").fops().vframe("jpg", 200, w=1000, h=3030).persistent()
+    
+    # get audio/vedio information
+    avinfo = yield bucket.res("dummy_av").avinfo().get()
+    avinfo_url = bucket.res("dummy_av").avinfo().url()
+
+    # prefop interface
+    response = yield bucket.res("key1").prefop("persistent_id")
+    
+```
+
+
+## License
+[MIT License](LICENSE)
