@@ -1,4 +1,4 @@
-sudo: false
+sudo: required
 language: python
 python: 
 - '3.4'
@@ -7,13 +7,14 @@ install:
 - pip install tornado
 - pip install autopep8
 - pip install flake8
+- pip install pytest
+- pip install pytest-cov
 before_script:
 - export ACCESS_KEY="CKQNXugLAXFueA5UlBKQnkWxslYC8rIErwn2ch4I"
 - export SECRET_KEY="4lnKaSKUk1SVmbB4alt6PtkL2O1Sm-jP6e-T7EER"
 - export DOMAIN="7xs7oc.com1.z0.glb.clouddn.com"
 - export BUCKET="static-pyblog-com"
-- PYTHONPATH="$PYTHONPATH:."
-- export PYTHONPATH
+- export PYTHONPATH="$PYTHONPATH:."
 script:
-- flake8 --show-source --show-pep8 --max-line-length=160
+- flake8 tornaqiniu --show-source --show-pep8 --max-line-length=160
 - python -m tornaqiniu.tests.runtests
