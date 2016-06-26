@@ -2,6 +2,7 @@
 
 import unittest
 import tornado.testing
+
 TEST_MODULES=[
 	'tornaqiniu.tests.test_resource_load'
 ]
