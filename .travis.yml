@@ -13,6 +13,7 @@ before_script:
 - export DOMAIN="7xs7oc.com1.z0.glb.clouddn.com"
 - export BUCKET="static-pyblog-com"
 - PYTHONPATH="$PYTHONPATH:."
+- export PYTHONPATH
 script:
 - flask8 --show-source --show-pep8 --max-line-length=160
 - python -m tornaqiniu.tests.runtests
