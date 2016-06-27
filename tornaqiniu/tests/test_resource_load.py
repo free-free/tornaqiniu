@@ -36,7 +36,7 @@ class TestResourceLoad(AsyncTestCase):
     @gen_test(timeout=60)
     def test_resource_upload(self):
         bucket = self.client.bucket(BUCKET, bucket_acp=1)
-        response = yield bucket.res('dummy_file').put("./dummy_file")
+        response = yield bucket.res('dummy_file').put("~/dummy_file")
         assert "hash" in response
 
     @gen_test(timeout=60)
