@@ -14,6 +14,5 @@ before_script:
 - export DOMAIN="7xs7oc.com1.z0.glb.clouddn.com"
 - export BUCKET="static-pyblog-com"
 - export PYTHONPATH="$PYTHONPATH:."
-- dd if=/dev/zero of=~/dummy_file bs=1K count=1024
 script:
 - python -m tornaqiniu.tests.runtests
