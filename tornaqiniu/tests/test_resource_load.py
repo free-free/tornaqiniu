@@ -7,7 +7,6 @@ from tornado import ioloop
 from tornado import gen
 from tornaqiniu import QiniuClient,Policy
 import time
-import sys
 import os
 ACK = os.getenv("ACCESS_KEY")
 SEK = os.getenv("SECRET_KEY")
