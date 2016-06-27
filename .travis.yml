@@ -16,5 +16,6 @@ before_script:
 - export PYTHONPATH="$PYTHONPATH:."
 - cd tornaqiniu/tests/
 - dd if=/dev/zero of=./dummy_file bs=1K count=1024
+- cd ~
 script:
 - python -m tornaqiniu.tests.runtests
