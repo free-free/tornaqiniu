@@ -8,11 +8,19 @@ from tornado import gen
 from tornaqiniu import QiniuClient,Policy
 import time
 import os
+import tempfile
 ACK = os.getenv("ACCESS_KEY")
 SEK = os.getenv("SECRET_KEY")
 DOMAIN = os.getenv("DOMAIN")
 BUCKET = os.getenv("BUCKET")
 
+def make_tmpfile(size):
+    tname = tempfile.mktemp()
+    with open(tname,'w+b') as f:
+        f.seek(size-1)
+        f.write(b'0')
+        f.close()
+    return tname
 
 class TestResourceLoad(AsyncTestCase):
 
@@ -35,8 +43,9 @@ class TestResourceLoad(AsyncTestCase):
 
     @gen_test(timeout=60)
     def test_resource_upload(self):
+        tname = make_tmpfile(1024*1024)
         bucket = self.client.bucket(BUCKET, bucket_acp=1)
-        response = yield bucket.res('dummy_file').put("~/dummy_file")
+        response = yield bucket.res('dummy_file').put(tname)
         assert "hash" in response
 
     @gen_test(timeout=60)
