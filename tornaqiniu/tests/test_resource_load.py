@@ -14,38 +14,38 @@ DOMAIN = os.getenv("DOMAIN")
 BUCKET = os.getenv("BUCKET")
 
 
-def TestResourceLoad(AsyncTestCase):
+class TestResourceLoad(AsyncTestCase):
 
     client = QiniuClient(ACK, SEK, DOMAIN)
 
     def test_private_url(self):
         bucket = self.client.bucket(BUCKET, bucket_acp=1)
-        purl = bucket('dummy_key').url()
+        purl = bucket.res('dummy_key').url()
         assert  purl != None
 
     def test_public_url(self):
         bucket = self.client.bucket(BUCKET, bucket_acp=0)
-        purl = bucket("dummy_key").url()
-        assert url != None
+        purl = bucket.res("dummy_key").url()
+        assert purl != None
 
     def test_multi_url(self):
         bucket = self.client.bucket(BUCKET)
         urls = bucket.res("dummy_key1","dummy_key2").url()
         assert len(urls) == 2
 
-    @gen_test
+    @gen_test(timeout=60)
     def test_resource_upload(self):
         bucket = self.client.bucket(BUCKET, bucket_acp=1)
         response = yield bucket.res('dummy_file').put("./dummy_file")
         assert "hash" in response
 
-    @gen_test
+    @gen_test(timeout=60)
     def test_resource_download(self):
         bucket = self.client.bucket(BUCKET, bucket_acp=1)
-        response = yield bucket.res("dummy_file").get()
+        response = yield bucket.res("image/python.jpg").get('hello.jpg')
         assert response != None 
     
-    @gen_test
+    @gen_test(timeout=60)
     def test_multi_resource_download(self):
         bucket =  self.client.bucket(BUCKET,bucket_acp=1)
         response = yield bucket.res("image/python.jpg","image/java.jpg").get()
@@ -54,7 +54,7 @@ def TestResourceLoad(AsyncTestCase):
     def test_upload_token(self):
         bucket = self.client.bucket(BUCKET, bucket_acp=1)
         upload_token = bucket.upload_token()
-        assert response != None
+        assert upload_token != None
 
 
 class TestPolicy(AsyncTestCase):
