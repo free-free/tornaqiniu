@@ -1,7 +1,7 @@
 #-*- coding:utf-8 -*-
 __email__ = "19941222hb@gmail.com"
 __author__ = "HuangBiao"
-
+__version__ = "1.0"
 
 PUT_POLICY = {
     "scope": {"type": str, "value": ""},
