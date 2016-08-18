@@ -36,7 +36,7 @@ Resource Upload and Download
 .. code-block:: python
 
     from tornado import gen,ioloop
-    from tornaqiniu import QiniuClient
+    from tornado-qiniu import QiniuClient
 
     access_key = "your qiniu access key"
     secret_key = "your qiniu secret key"
@@ -82,7 +82,7 @@ Resource Management
 .. code-block:: python
 
     from tornado import gen,ioloop
-    from tornaqiniu import QiniuClient
+    from tornado-qiniu import QiniuClient
 
     access_key = "your qiniu access key"
     secret_key = "your qiniu secret key"
@@ -157,7 +157,7 @@ Resource Process
 .. code-block:: python
 
     from tornado import gen,ioloop
-    from tornaqiniu import QiniuClient
+    from tornado-qiniu import QiniuClient
 
     access_key = "your qiniu access key"
     secret_key = "your qiniu secret key"
