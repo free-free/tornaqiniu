@@ -16,4 +16,4 @@ before_script:
 - export BUCKET="static-pyblog-com"
 - export PYTHONPATH="$PYTHONPATH:."
 script:
-- python -m tornaqiniu.tests.runtests
+- python -m tornado-qiniu.tests.runtests
