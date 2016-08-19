@@ -13,6 +13,13 @@ Installation
     $ python3.x setup.py install
 
 
+or 
+
+.. code-block:: bash
+    
+    $ pip3.x install tornado-qiniu
+
+
 Environment
 -------------------
 
