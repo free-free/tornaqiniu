@@ -1,5 +1,5 @@
 qiniu storage asynchronous sdk for tornado
-============================================
+=================================================
 
 .. image:: https://img.shields.io/github/license/mashape/apistatus.svg
   :target: LICENSE
@@ -39,7 +39,6 @@ Quick Start
 Resource Upload and Download
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-
 .. code-block:: python
 
     from tornado import gen,ioloop
@@ -50,7 +49,6 @@ Resource Upload and Download
     bucket_name = "your bucket name"
     domain = "your domain"
     bucket_acp = 0   #bucket access property,1 ===>private bucket,0===>public bucket
-
 
     client = QiniuClient(access_key, secret_key, domain)
     loop = ioloop.IOLoop.current()
@@ -86,6 +84,7 @@ Resource Upload and Download
 
 Resource Management
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
 .. code-block:: python
 
     from tornado import gen,ioloop
