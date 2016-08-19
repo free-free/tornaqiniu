@@ -4,6 +4,7 @@ from setuptools import setup,find_packages
 import os
 import re
 
+
 def read(f):
     return open(os.path.join(os.path.dirname(__file__), f)).read().strip()
 
@@ -17,8 +18,8 @@ def find_version(f):
 
 
 setup(
-    name="tornado-qiniu",
-    version=find_version("tornado-qiniu/__init__.py"),
+    name="tornado_qiniu",
+    version=find_version("tornado_qiniu/__init__.py"),
     author="HuangBiao",
     author_email="19941222hb@gmail.com",
     description="An asynchronous qiniu cloud storage sdk for tornado",
@@ -35,7 +36,6 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Topic :: Software Development :: Libraries :: Python Modules',
