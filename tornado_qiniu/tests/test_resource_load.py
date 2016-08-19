@@ -5,7 +5,7 @@ from tornado.testing import gen_test
 import tornado.testing
 from tornado import ioloop
 from tornado import gen
-from tornado-qiniu import QiniuClient,Policy
+from tornado_qiniu import QiniuClient,Policy
 import time
 import os
 import tempfile
