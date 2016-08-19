@@ -27,7 +27,7 @@ Environment
    :widths: 50 50
    :headers-rows: 1
 
-   * - tornaqiniu version 
+   * - tornado_qiniu version 
      - python version
    * - 1.0
      - 3.4,3.5
@@ -43,7 +43,7 @@ Resource Upload and Download
 .. code-block:: python
 
     from tornado import gen,ioloop
-    from tornado-qiniu import QiniuClient
+    from tornado_qiniu import QiniuClient
 
     access_key = "your qiniu access key"
     secret_key = "your qiniu secret key"
@@ -89,7 +89,7 @@ Resource Management
 .. code-block:: python
 
     from tornado import gen,ioloop
-    from tornado-qiniu import QiniuClient
+    from tornado_qiniu import QiniuClient
 
     access_key = "your qiniu access key"
     secret_key = "your qiniu secret key"
@@ -164,7 +164,7 @@ Resource Process
 .. code-block:: python
 
     from tornado import gen,ioloop
-    from tornado-qiniu import QiniuClient
+    from tornado_qiniu import QiniuClient
 
     access_key = "your qiniu access key"
     secret_key = "your qiniu secret key"
