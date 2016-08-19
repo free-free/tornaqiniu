@@ -17,7 +17,7 @@ def find_version(f):
 
 
 setup(
-    name="tornaqiniu",
+    name="tornado-qiniu",
     version=find_version("tornado-qiniu/__init__.py"),
     author="HuangBiao",
     author_email="19941222hb@gmail.com",
