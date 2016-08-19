@@ -1,6 +1,7 @@
 qiniu storage asynchronous sdk for tornado
 =================================================
 
+
 .. image:: https://img.shields.io/github/license/mashape/apistatus.svg
   :target: LICENSE
 
@@ -15,9 +16,10 @@ Installation
 
 or 
 
+
 .. code-block:: bash
     
-    $ pip3.x install tornado-qiniu
+    $ pip3.x install tornado_qiniu
 
 
 Environment
@@ -35,6 +37,7 @@ Environment
 
 Quick Start
 ---------------------
+
 
 Resource Upload and Download
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
