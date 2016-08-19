@@ -4,7 +4,7 @@ import unittest
 import tornado.testing
 
 TEST_MODULES=[
-	'tornaqiniu.tests.test_resource_load'
+	'tornado-qiniu.tests.test_resource_load'
 ]
 
 def all():
