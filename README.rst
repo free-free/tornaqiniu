@@ -1,7 +1,6 @@
 qiniu storage asynchronous sdk for tornado
 =================================================
 
-
 .. image:: https://img.shields.io/github/license/mashape/apistatus.svg
   :target: LICENSE
 
@@ -14,8 +13,7 @@ Installation
     $ python3.x setup.py install
 
 
-or 
-
+or
 
 .. code-block:: bash
     
@@ -27,7 +25,7 @@ Environment
 
 .. list-table::
    :widths: 50 50
-   :headers-rows: 1
+   :header-rows: 1
 
    * - tornado_qiniu version 
      - python version
@@ -37,7 +35,6 @@ Environment
 
 Quick Start
 ---------------------
-
 
 Resource Upload and Download
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -155,9 +152,7 @@ Resource Management
         batch.list()
         #execute batch ,return json format data
         yield bacth.execute()
-
     loop.run_sync(batch_ops)
-
 
 
 Resource Process
@@ -196,7 +191,6 @@ Resource Process
     # resource fops
     @gen.coroutine
     def resource_fops():
-    
         # resource qrcode url
         qrcodeurl = bucket.res("dummy_img_key").fops().qrcode().url()
     
@@ -242,7 +236,6 @@ Resource Process
         # prefop interface
         response = yield bucket.res("key1").prefop("persistent_id")
     
-
 
 License
 -----------------
