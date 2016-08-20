@@ -26,7 +26,6 @@ setup(
     long_description=read("README.rst"),
     license="MIT",
     url="https://github.com/free-free/tornaqiniu",
-    download_url = "https://github.com/free-free/tornaqiniu/archive/master.zip",
     packages=find_packages(),
     include_package_data=True,
     install_requires=['tornado', 'futures'],
